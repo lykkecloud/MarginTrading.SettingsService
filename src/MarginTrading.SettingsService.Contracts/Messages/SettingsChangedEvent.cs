@@ -1,12 +1,20 @@
 ﻿using System;
+using JetBrains.Annotations;
 using MarginTrading.SettingsService.Contracts.Enums;
 
-namespace MarginTrading.SettingsService.Contracts.Messages
+namespace MarginTrading.SettingsService.Contracts.Common
 {
-    public class SettingsChangedEvent
+    public class SettingsChangedEvent : TraceableMessageBase
     {
-        public DateTime Timestamp { get; set; }
         public SettingsTypeContract SettingsType { get; set; }
         public string Route { get; set; }
+
+        public SettingsChangedEvent([NotNull] string correlationId, [CanBeNull] string causationId,
+                DateTime eventTimestamp, SettingsTypeContract settingsType, string route)
+            :base(correlationId, causationId, eventTimestamp)
+        {
+            SettingsType = settingsType;
+            Route = route;
+        }
     }
 }

@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
 using MarginTrading.SettingsService.Contracts.AssetPair;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Enums;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
@@ -67,8 +68,14 @@ namespace MarginTrading.SettingsService.Controllers
         /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<AssetPairContract> Insert([FromBody] AssetPairContract assetPair)
+        public async Task<AssetPairContract> Insert([FromBody] AssetPairContract assetPair, 
+            CudRequestParams cudRequestParams)
         {
+            if (cudRequestParams == null)
+            {
+                throw new ArgumentNullException(nameof(cudRequestParams));
+            }
+            
             await ValidatePair(assetPair);
             
             _defaultLegalEntitySettings.Set(assetPair);
@@ -79,7 +86,11 @@ namespace MarginTrading.SettingsService.Controllers
                 throw new ArgumentException($"Asset pair with id {assetPair.Id} already exists", nameof(assetPair.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.AssetPair);
+            await _eventSender.SendSettingsChangedEvent(
+                string.IsNullOrWhiteSpace(cudRequestParams.CorrelationId) ? cudRequestParams.Id : cudRequestParams.CorrelationId, 
+                string.IsNullOrWhiteSpace(cudRequestParams.CausationId) ? cudRequestParams.Id : cudRequestParams.CausationId,
+                $"{Request.Path}", 
+                SettingsChangedSourceType.AssetPair);
             
             return assetPair;
         }
