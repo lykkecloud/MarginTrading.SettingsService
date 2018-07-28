@@ -55,6 +55,9 @@ namespace MarginTrading.SettingsService.Contracts.Common
             EventTimestamp = eventTimestamp;
         }
         
+        /// <summary>
+        /// For serialization only!
+        /// </summary>
         [SerializationConstructor]
         public TraceableMessageBase()
         {

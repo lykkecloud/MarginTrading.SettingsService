@@ -1,4 +1,4 @@
-﻿namespace MarginTrading.SettingsService.Contracts.TradingConditions
+﻿namespace MarginTrading.SettingsService.Contracts.TradingInstruments
 {
     // TODO: Category hierarchy
     public class TradingInstrumentContract

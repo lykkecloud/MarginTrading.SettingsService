@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Routes;
 using Refit;
 
@@ -14,7 +15,7 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Post("/api/routes/")]
-        Task<MatchingEngineRouteContract> Insert([Body] MatchingEngineRouteContract route);
+        Task<MatchingEngineRouteContract> Insert([NotNull] [Body] TradingRouteUpsertRequestParams @params);
 
 
         [ItemCanBeNull]
@@ -23,10 +24,11 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Put("/api/routes/{routeId}")]
-        Task<MatchingEngineRouteContract> Update( [NotNull] string routeId, [Body] MatchingEngineRouteContract route);
+        Task<MatchingEngineRouteContract> Update( [NotNull] string routeId, 
+            [NotNull] [Body] TradingRouteUpsertRequestParams @params);
 
 
         [Delete("/api/routes/{routeId}")]
-        Task Delete([NotNull] string routeId);
+        Task Delete([NotNull] string routeId, [NotNull] [Body] TraceableRequestParams @params);
     }
 }

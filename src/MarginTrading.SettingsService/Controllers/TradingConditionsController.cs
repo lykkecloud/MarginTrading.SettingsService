@@ -43,7 +43,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of trading conditions
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<TradingConditionContract>> List([FromQuery] bool? isDefault = null)
@@ -58,47 +57,48 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new trading condition
         /// </summary>
-        /// <param name="tradingCondition"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<TradingConditionContract> Insert([FromBody] TradingConditionContract tradingCondition)
+        public async Task<TradingConditionContract> Insert([FromBody] TradingConditionUpsertRequestParams @params)
         {
-            await ValidateTradingCondition(tradingCondition);
+            @params?.Traceability.Validate();
+            await ValidateTradingCondition(@params.TradingCondition);
             
             var defaultTradingCondition =
                 (await _tradingConditionsRepository.GetDefaultAsync()).FirstOrDefault();
 
-            if (tradingCondition.IsDefault 
-                && defaultTradingCondition != null && defaultTradingCondition.Id != tradingCondition.Id)
+            if (@params.TradingCondition.IsDefault 
+                && defaultTradingCondition != null && defaultTradingCondition.Id != @params.TradingCondition.Id)
             {
                 await SetDefault(defaultTradingCondition, false);
             }
 
             if (defaultTradingCondition == null)
             {
-                tradingCondition.IsDefault = true;
+                @params.TradingCondition.IsDefault = true;
             }
             
-            _defaultLegalEntitySettings.Set(tradingCondition);
+            _defaultLegalEntitySettings.Set(@params.TradingCondition);
                 
             if (!await _tradingConditionsRepository.TryInsertAsync(
-                _convertService.Convert<TradingConditionContract, TradingCondition>(tradingCondition)))
+                _convertService.Convert<TradingConditionContract, TradingCondition>(@params.TradingCondition)))
             {
-                throw new ArgumentException($"Trading condition with id {tradingCondition.Id} already exists",
-                    nameof(tradingCondition.Id));
+                throw new ArgumentException($"Trading condition with id {@params.TradingCondition.Id} already exists",
+                    nameof(@params.TradingCondition.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingCondition);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingCondition);
 
-            return tradingCondition;
+            return @params.TradingCondition;
         }
 
         /// <summary>
         /// Get the trading condition
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{tradingConditionId}")]
         public async Task<TradingConditionContract> Get(string tradingConditionId)
@@ -111,50 +111,52 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the trading condition
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="tradingCondition"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{tradingConditionId}")]
         public async Task<TradingConditionContract> Update(string tradingConditionId, 
-            [FromBody] TradingConditionContract tradingCondition)
+            [FromBody] TradingConditionUpsertRequestParams @params)
         {
-            await ValidateTradingCondition(tradingCondition);
+            @params?.Traceability.Validate();
+            await ValidateTradingCondition(@params.TradingCondition);
             
-            ValidateId(tradingConditionId, tradingCondition);
+            ValidateId(tradingConditionId, @params.TradingCondition);
             
             var defaultTradingCondition =
                 (await _tradingConditionsRepository.GetDefaultAsync()).FirstOrDefault();
-            if (defaultTradingCondition == null && !tradingCondition.IsDefault)
+            if (defaultTradingCondition == null && !@params.TradingCondition.IsDefault)
             {
-                tradingCondition.IsDefault = true;
+                @params.TradingCondition.IsDefault = true;
             }
 
             if (defaultTradingCondition != null 
-                && tradingCondition.IsDefault && defaultTradingCondition.Id != tradingCondition.Id)
+                && @params.TradingCondition.IsDefault && defaultTradingCondition.Id != @params.TradingCondition.Id)
             {
                 await SetDefault(defaultTradingCondition, false);
             }
             
-            _defaultLegalEntitySettings.Set(tradingCondition);
+            _defaultLegalEntitySettings.Set(@params.TradingCondition);
 
-            var existingCondition = await _tradingConditionsRepository.GetAsync(tradingCondition.Id);
+            var existingCondition = await _tradingConditionsRepository.GetAsync(@params.TradingCondition.Id);
             if (existingCondition == null)
             {
-                throw new Exception($"Trading condition with Id = {tradingCondition.Id} not found");
+                throw new Exception($"Trading condition with Id = {@params.TradingCondition.Id} not found");
             }
 
-            if (existingCondition.LegalEntity != tradingCondition.LegalEntity)
+            if (existingCondition.LegalEntity != @params.TradingCondition.LegalEntity)
             {
                 throw new Exception("LegalEntity cannot be changed");
             }
 
             await _tradingConditionsRepository.UpdateAsync(
-                _convertService.Convert<TradingConditionContract, TradingCondition>(tradingCondition));
+                _convertService.Convert<TradingConditionContract, TradingCondition>(@params.TradingCondition));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingCondition);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingCondition);
             
-            return tradingCondition;
+            return @params.TradingCondition;
         }
 
         private async Task SetDefault(ITradingCondition obj, bool state)

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using MarginTrading.SettingsService.Contracts.AssetPair;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Enums;
 using Refit;
 
@@ -13,11 +14,11 @@ namespace MarginTrading.SettingsService.Contracts
         [Get("/api/assetPairs")]
         Task<List<AssetPairContract>> List(
             [Query, CanBeNull] string legalEntity = null,
-            [Query] MatchingEngineModeContract? matchingEngineMode = null);
+            [Query, CanBeNull] MatchingEngineModeContract? matchingEngineMode = null);
 
 
         [Post("/api/assetPairs")]
-        Task<AssetPairContract> Insert([Body] AssetPairContract assetPair);
+        Task<AssetPairContract> Insert([NotNull] [Body] AssetPairUpsertRequestParams @params);
 
 
         [ItemCanBeNull]
@@ -26,10 +27,11 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Put("/api/assetPairs/{assetPairId}")]
-        Task<AssetPairContract> Update([NotNull] string assetPairId, [Body] AssetPairContract assetPair);
+        Task<AssetPairContract> Update([NotNull] string assetPairId,
+            [NotNull] [Body] AssetPairUpsertRequestParams @params);
 
 
         [Delete("/api/assetPairs/{assetPairId}")]
-        Task Delete([NotNull] string assetPairId);
+        Task Delete([NotNull] string assetPairId, [NotNull] [Body] TraceableRequestParams @params);
     }
 }

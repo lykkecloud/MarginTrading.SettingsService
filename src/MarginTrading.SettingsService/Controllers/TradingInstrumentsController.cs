@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.TradingConditions;
+using MarginTrading.SettingsService.Contracts.TradingInstruments;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Core.Settings;
+using MarginTrading.SettingsService.Extensions;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -67,43 +70,43 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new trading instrument
         /// </summary>
-        /// <param name="instrument"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<TradingInstrumentContract> Insert([FromBody] TradingInstrumentContract instrument)
+        public async Task<TradingInstrumentContract> Insert([FromBody] TradingInstrumentUpsertRequestParams @params)
         {
-            await ValidateTradingInstrument(instrument);
+            @params?.Traceability.Validate();
+            await ValidateTradingInstrument(@params.TradingInstrument);
 
             if (!await _tradingInstrumentsRepository.TryInsertAsync(
-                _convertService.Convert<TradingInstrumentContract, TradingInstrument>(instrument)))
+                _convertService.Convert<TradingInstrumentContract, TradingInstrument>(@params.TradingInstrument)))
             {
-                throw new ArgumentException($"Trading instrument with tradingConditionId {instrument.TradingConditionId}" +
-                                            $"and assetPairId {instrument.Instrument} already exists");
+                throw new ArgumentException($"Trading instrument with tradingConditionId {@params.TradingInstrument.TradingConditionId}" +
+                                            $"and assetPairId {@params.TradingInstrument.Instrument} already exists");
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingInstrument);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingInstrument);
 
-            return instrument;
+            return @params.TradingInstrument;
         }
 
         /// <summary>
         /// Assign trading instrument to a trading condition with default values
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="instruments"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("{tradingConditionId}")]
         public async Task<List<TradingInstrumentContract>> AssignCollection(string tradingConditionId, 
-            [FromBody] string[] instruments)
+            [FromBody] TradingInstrumentAssignCollectionRequestParams @params)
         {
             var currentInstruments =
                 await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId);
 
             if (currentInstruments.Any())
             {
-                var toRemove = currentInstruments.Where(x => !instruments.Contains(x.Instrument)).ToArray();
+                var toRemove = currentInstruments.Where(x => !@params.Instruments.Contains(x.Instrument)).ToArray();
                 
                 var existingOrderGroups = await _tradingService.CheckActiveByTradingCondition(tradingConditionId);
                 
@@ -122,12 +125,16 @@ namespace MarginTrading.SettingsService.Controllers
                 }
             }
             
-            var pairsToAdd = instruments.Where(x => currentInstruments.All(y => y.Instrument != x));
+            var pairsToAdd = @params.Instruments.Where(x => currentInstruments.All(y => y.Instrument != x));
 
             var addedPairs = await _tradingInstrumentsRepository.CreateDefaultTradingInstruments(tradingConditionId,
                 pairsToAdd, _defaultTradingInstrumentSettings);
             
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingInstrument);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingInstrument);
 
             return addedPairs.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x))
                 .ToList();
@@ -136,9 +143,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get trading instrument
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="assetPairId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{tradingConditionId}/{assetPairId}")]
         public async Task<TradingInstrumentContract> Get(string tradingConditionId, string assetPairId)
@@ -151,39 +155,42 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the trading instrument
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="assetPairId"></param>
-        /// <param name="instrument"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{tradingConditionId}/{assetPairId}")]
         public async Task<TradingInstrumentContract> Update(string tradingConditionId, string assetPairId, 
-            [FromBody] TradingInstrumentContract instrument)
+            [FromBody] TradingInstrumentUpsertRequestParams @params)
         {
-            await ValidateTradingInstrument(instrument);
-            ValidateId(tradingConditionId, assetPairId, instrument);
+            @params?.Traceability.Validate();
+            await ValidateTradingInstrument(@params.TradingInstrument);
+            ValidateId(tradingConditionId, assetPairId, @params.TradingInstrument);
 
             await _tradingInstrumentsRepository.UpdateAsync(
-                _convertService.Convert<TradingInstrumentContract, TradingInstrument>(instrument));
+                _convertService.Convert<TradingInstrumentContract, TradingInstrument>(@params.TradingInstrument));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingInstrument);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingInstrument);
             
-            return instrument;
+            return @params.TradingInstrument;
         }
 
         /// <summary>
         /// Delete the trading instrument
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="assetPairId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{tradingConditionId}/{assetPairId}")]
-        public async Task Delete(string tradingConditionId, string assetPairId)
+        public async Task Delete(string tradingConditionId, string assetPairId, 
+            [FromBody] TraceableRequestParams @params)
         {
             await _tradingInstrumentsRepository.DeleteAsync(assetPairId, tradingConditionId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingInstrument);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingInstrument);
         }
 
         private void ValidateId(string tradingConditionId, string assetPairId, TradingInstrumentContract contract)

@@ -64,42 +64,33 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new asset pair
         /// </summary>
-        /// <param name="assetPair"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<AssetPairContract> Insert([FromBody] AssetPairContract assetPair, 
-            CudRequestParams cudRequestParams)
+        public async Task<AssetPairContract> Insert([FromBody] AssetPairUpsertRequestParams @params)
         {
-            if (cudRequestParams == null)
-            {
-                throw new ArgumentNullException(nameof(cudRequestParams));
-            }
+            @params?.Traceability.Validate();
+            await ValidatePair(@params.AssetPair);
             
-            await ValidatePair(assetPair);
-            
-            _defaultLegalEntitySettings.Set(assetPair);
+            _defaultLegalEntitySettings.Set(@params.AssetPair);
 
             if (!await _assetPairsRepository.TryInsertAsync(
-                _convertService.Convert<AssetPairContract, AssetPair>(assetPair)))
+                _convertService.Convert<AssetPairContract, AssetPair>(@params.AssetPair)))
             {
-                throw new ArgumentException($"Asset pair with id {assetPair.Id} already exists", nameof(assetPair.Id));
+                throw new ArgumentException($"Asset pair with id {@params.AssetPair.Id} already exists", nameof(@params.AssetPair.Id));
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                string.IsNullOrWhiteSpace(cudRequestParams.CorrelationId) ? cudRequestParams.Id : cudRequestParams.CorrelationId, 
-                string.IsNullOrWhiteSpace(cudRequestParams.CausationId) ? cudRequestParams.Id : cudRequestParams.CausationId,
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
                 $"{Request.Path}", 
                 SettingsChangedSourceType.AssetPair);
             
-            return assetPair;
+            return @params.AssetPair;
         }
 
         /// <summary>
         /// Get asset pair by id
         /// </summary>
-        /// <param name="assetPairId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{assetPairId}")]
         public async Task<AssetPairContract> Get(string assetPairId)
@@ -111,37 +102,44 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update asset pair
         /// </summary>
-        /// <param name="assetPairId"></param>
-        /// <param name="assetPair"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{assetPairId}")]
-        public async Task<AssetPairContract> Update(string assetPairId, [FromBody] AssetPairContract assetPair)
+        public async Task<AssetPairContract> Update(string assetPairId,
+            [FromBody] AssetPairUpsertRequestParams @params)
         {
-            await ValidatePair(assetPair);
-            ValidateId(assetPairId, assetPair);
+            @params?.Traceability.Validate();
+            await ValidatePair(@params.AssetPair);
+            ValidateId(assetPairId, @params.AssetPair);
 
-            _defaultLegalEntitySettings.Set(assetPair);
+            _defaultLegalEntitySettings.Set(@params.AssetPair);
 
-            await _assetPairsRepository.UpdateAsync(_convertService.Convert<AssetPairContract, AssetPair>(assetPair));
+            await _assetPairsRepository.UpdateAsync(_convertService.Convert<AssetPairContract, AssetPair>(@params.AssetPair));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.AssetPair);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.AssetPair);
             
-            return assetPair;
+            return @params.AssetPair;
         }
 
         /// <summary>
         /// Delete asset pair
         /// </summary>
-        /// <param name="assetPairId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{assetPairId}")]
-        public async Task Delete(string assetPairId)
+        public async Task Delete(string assetPairId, [FromBody] TraceableRequestParams @params)
         {
+            @params.Validate();
+            
             await _assetPairsRepository.DeleteAsync(assetPairId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.AssetPair);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.AssetPair);
         }
 
         private async Task ValidatePair(AssetPairContract newValue)

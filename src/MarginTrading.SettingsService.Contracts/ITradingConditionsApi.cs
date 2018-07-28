@@ -14,7 +14,7 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Post("/api/tradingConditions")]
-        Task<TradingConditionContract> Insert([Body] TradingConditionContract tradingCondition);
+        Task<TradingConditionContract> Insert([NotNull] [Body] TradingConditionUpsertRequestParams @params);
 
 
         [ItemCanBeNull]
@@ -25,7 +25,7 @@ namespace MarginTrading.SettingsService.Contracts
         [Put("/api/tradingConditions/{tradingConditionId}")]
         Task<TradingConditionContract> Update(
             [NotNull] string tradingConditionId,
-            [Body] TradingConditionContract tradingCondition);
+            [NotNull] [Body] TradingConditionUpsertRequestParams @params);
 
     }
 }

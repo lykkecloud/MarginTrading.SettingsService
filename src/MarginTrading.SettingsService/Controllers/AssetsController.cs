@@ -4,9 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
 using MarginTrading.SettingsService.Contracts.Asset;
+using MarginTrading.SettingsService.Contracts.AssetPair;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
+using MarginTrading.SettingsService.Extensions;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -35,7 +38,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of assets
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<AssetContract>> List()
@@ -48,29 +50,30 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new asset
         /// </summary>
-        /// <param name="asset"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<AssetContract> Insert([FromBody] AssetContract asset)
+        public async Task<AssetContract> Insert([FromBody] AssetUpsertRequestParams @params)
         {
-            Validate(asset);
+            @params?.Traceability.Validate();
+            Validate(@params.Asset);
 
-            if (!await _assetsRepository.TryInsertAsync(_convertService.Convert<AssetContract, Asset>(asset)))
+            if (!await _assetsRepository.TryInsertAsync(_convertService.Convert<AssetContract, Asset>(@params.Asset)))
             {
-                throw new ArgumentException($"Asset with id {asset.Id} already exists", nameof(asset.Id));
+                throw new ArgumentException($"Asset with id {@params.Asset.Id} already exists", nameof(@params.Asset.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Asset);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Asset);
 
-            return asset;
+            return @params.Asset;
         }
 
         /// <summary>
         /// Get the asset
         /// </summary>
-        /// <param name="assetId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{assetId}")]
         public async Task<AssetContract> Get(string assetId)
@@ -83,35 +86,41 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the asset
         /// </summary>
-        /// <param name="assetId"></param>
-        /// <param name="asset"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{assetId}")]
-        public async Task<AssetContract> Update(string assetId, [FromBody] AssetContract asset)
+        public async Task<AssetContract> Update(string assetId, [FromBody] AssetUpsertRequestParams @params)
         {
-            Validate(asset);
-            ValidateId(assetId, asset);
+            @params?.Traceability.Validate();
+            Validate(@params.Asset);
+            ValidateId(assetId, @params.Asset);
 
-            await _assetsRepository.UpdateAsync(_convertService.Convert<AssetContract, Asset>(asset));
+            await _assetsRepository.UpdateAsync(_convertService.Convert<AssetContract, Asset>(@params.Asset));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Asset);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Asset);
             
-            return asset;
+            return @params.Asset;
         }
 
         /// <summary>
         /// Delete the asset
         /// </summary>
-        /// <param name="assetId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{assetId}")]
-        public async Task Delete(string assetId)
+        public async Task Delete(string assetId, [FromBody] TraceableRequestParams @params)
         {
+            @params.Validate();
+            
             await _assetsRepository.DeleteAsync(assetId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Asset);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Asset);
         }
 
         private void ValidateId(string id, AssetContract contract)

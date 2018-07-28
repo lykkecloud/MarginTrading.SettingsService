@@ -7,11 +7,13 @@ using Lykke.HttpClientGenerator;
 using MarginTrading.SettingsService.Contracts;
 using MarginTrading.SettingsService.Contracts.Asset;
 using MarginTrading.SettingsService.Contracts.AssetPair;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Enums;
 using MarginTrading.SettingsService.Contracts.Market;
 using MarginTrading.SettingsService.Contracts.Routes;
 using MarginTrading.SettingsService.Contracts.Scheduling;
 using MarginTrading.SettingsService.Contracts.TradingConditions;
+using MarginTrading.SettingsService.Contracts.TradingInstruments;
 using Newtonsoft.Json;
 using Refit;
 
@@ -92,12 +94,18 @@ namespace MarginTrading.SettingsService.TestClient
             var assetPairsApiClient = clientGenerator.Generate<IAssetPairsApi>();
             await assetPairsApiClient.List().Dump();
             if (await assetPairsApiClient.Get("t1") == null)
-                await assetPairsApiClient.Insert(assetPairContract).Dump();
+                await assetPairsApiClient.Insert(new AssetPairUpsertRequestParams
+                {
+                    AssetPair = assetPairContract, Traceability = GetRequestParams(),
+                }).Dump();
             var obj = await assetPairsApiClient.Get("t1").Dump();
             //TODO validate values here
             assetPairContract.MarketId = "m11111";
-            await assetPairsApiClient.Update("t1", assetPairContract).Dump();
-            await assetPairsApiClient.Delete("t1");
+            await assetPairsApiClient.Update("t1", new AssetPairUpsertRequestParams
+            {
+                AssetPair = assetPairContract, Traceability = GetRequestParams()
+            }).Dump();
+            await assetPairsApiClient.Delete("t1", GetRequestParams());
         }
 
         private static async Task CheckAssetsApiWorking(IHttpClientGenerator clientGenerator)
@@ -111,11 +119,17 @@ namespace MarginTrading.SettingsService.TestClient
             
             var assetsApiClient = clientGenerator.Generate<IAssetsApi>();
             await assetsApiClient.List().Dump();
-            await assetsApiClient.Insert(asset).Dump();
+            await assetsApiClient.Insert(new AssetUpsertRequestParams
+            {
+                Asset = asset, Traceability = GetRequestParams(),
+            }).Dump();
             await assetsApiClient.Get("t1").Dump();
             asset.Name = "2";
-            await assetsApiClient.Update("t1", asset).Dump();
-            await assetsApiClient.Delete("t1");
+            await assetsApiClient.Update("t1", new AssetUpsertRequestParams
+            {
+                Asset = asset, Traceability = GetRequestParams(),
+            }).Dump();
+            await assetsApiClient.Delete("t1", GetRequestParams());
         }
 
         private static async Task CheckMarketsApiWorking(IHttpClientGenerator clientGenerator)
@@ -128,11 +142,17 @@ namespace MarginTrading.SettingsService.TestClient
 
             var marketApiClient = clientGenerator.Generate<IMarketsApi>();
             await marketApiClient.List().Dump();
-            await marketApiClient.Insert(market).Dump();
+            await marketApiClient.Insert(new MarketUpsertRequestParams
+            {
+                Market = market, Traceability = GetRequestParams(),
+            }).Dump();
             await marketApiClient.Get("m1").Dump();
             market.Name = "1111";
-            await marketApiClient.Update("m1", market).Dump();
-            await marketApiClient.Delete("m1");
+            await marketApiClient.Update("m1", new MarketUpsertRequestParams
+            {
+                Market = market, Traceability = GetRequestParams(),
+            }).Dump();
+            await marketApiClient.Delete("m1", GetRequestParams());
         }
 
         private static async Task CheckScheduleSettingsApiWorking(IHttpClientGenerator clientGenerator)
@@ -152,20 +172,26 @@ namespace MarginTrading.SettingsService.TestClient
 
             var scheduleSettingsApiClient = clientGenerator.Generate<IScheduleSettingsApi>();
             await scheduleSettingsApiClient.List().Dump();
-            await scheduleSettingsApiClient.Insert(scheduleSettings).Dump();
+            await scheduleSettingsApiClient.Insert(new ScheduleSettingsUpsertRequestParams
+            {
+                ScheduleSettings = scheduleSettings, Traceability = GetRequestParams(),
+            }).Dump();
             await scheduleSettingsApiClient.Get("s1").Dump();
             scheduleSettings.Rank = 100000;
-            await scheduleSettingsApiClient.Update("s1", scheduleSettings).Dump();
+            await scheduleSettingsApiClient.Update("s1", new ScheduleSettingsUpsertRequestParams
+            {
+                ScheduleSettings = scheduleSettings, Traceability = GetRequestParams(),
+            }).Dump();
             await scheduleSettingsApiClient.StateList(new[] {"EURUSD"}).Dump();
-            await scheduleSettingsApiClient.Delete("s1");
+            await scheduleSettingsApiClient.Delete("s1", GetRequestParams());
         }
 
         private static async Task CheckServiceMaintenanceApiWorking(IHttpClientGenerator clientGenerator)
         {
             var serviceMaintenanceApiClient = clientGenerator.Generate<IServiceMaintenanceApi>();
             await serviceMaintenanceApiClient.Get().Dump();
-            await serviceMaintenanceApiClient.Post(true).Dump();
-            await serviceMaintenanceApiClient.Post(false).Dump();
+            await serviceMaintenanceApiClient.Post(true, GetRequestParams()).Dump();
+            await serviceMaintenanceApiClient.Post(false, GetRequestParams()).Dump();
         }
 
         private static async Task CheckTradingConditionsApiWorking(IHttpClientGenerator clientGenerator)
@@ -187,10 +213,16 @@ namespace MarginTrading.SettingsService.TestClient
             var tradingConditionApiClient = clientGenerator.Generate<ITradingConditionsApi>();
             await tradingConditionApiClient.List().Dump();
             if (await tradingConditionApiClient.Get("t1") == null)
-                await tradingConditionApiClient.Insert(tradingCondition).Dump();
+                await tradingConditionApiClient.Insert(new TradingConditionUpsertRequestParams
+                {
+                    TradingCondition = tradingCondition, Traceability = GetRequestParams(),
+                }).Dump();
             await tradingConditionApiClient.Get("t1").Dump();
             tradingCondition.Name = "11111";
-            await tradingConditionApiClient.Update("t1", tradingCondition).Dump();
+            await tradingConditionApiClient.Update("t1", new TradingConditionUpsertRequestParams
+            {
+                TradingCondition = tradingCondition, Traceability = GetRequestParams(),
+            }).Dump();
         }
 
         private static async Task CheckTradingInstrumentsApiWorking(IHttpClientGenerator clientGenerator)
@@ -215,14 +247,23 @@ namespace MarginTrading.SettingsService.TestClient
 
             var tradingInstrumentApiClient = clientGenerator.Generate<ITradingInstrumentsApi>();
             await tradingInstrumentApiClient.List(null).Dump();
-            await tradingInstrumentApiClient.Insert(tradingInstrument).Dump();
+            await tradingInstrumentApiClient.Insert(new TradingInstrumentUpsertRequestParams
+            {
+                TradingInstrument = tradingInstrument, Traceability = GetRequestParams(),
+            }).Dump();
             tradingInstrument.LeverageInit = 2;
-            await tradingInstrumentApiClient.Update("t1", "BTCUSD", tradingInstrument).Dump();
-            await tradingInstrumentApiClient.AssignCollection("t1", new[] {"EURUSD", "EURCHF", "BTCUSD"}).Dump();
+            await tradingInstrumentApiClient.Update("t1", "BTCUSD", new TradingInstrumentUpsertRequestParams
+            {
+                TradingInstrument = tradingInstrument, Traceability = GetRequestParams(),
+            }).Dump();
+            await tradingInstrumentApiClient.AssignCollection("t1", new TradingInstrumentAssignCollectionRequestParams
+            {
+                Instruments = new[] {"EURUSD", "EURCHF", "BTCUSD"}, Traceability = GetRequestParams(),
+            }).Dump();
             foreach (var tradingInstrumentContract in await tradingInstrumentApiClient.List(null))
             {
                 await tradingInstrumentApiClient.Delete(tradingInstrumentContract.TradingConditionId,
-                    tradingInstrumentContract.Instrument);
+                    tradingInstrumentContract.Instrument, GetRequestParams());
             }
         }
 
@@ -244,10 +285,16 @@ namespace MarginTrading.SettingsService.TestClient
 
             var tradingRouteApiClient = clientGenerator.Generate<ITradingRoutesApi>();
             await tradingRouteApiClient.List().Dump();
-            await tradingRouteApiClient.Insert(tradingRoute).Dump();
+            await tradingRouteApiClient.Insert(new TradingRouteUpsertRequestParams
+            {
+                TradingRoute = tradingRoute, Traceability = GetRequestParams(),
+            }).Dump();
             tradingRoute.Rank = 10000;
-            await tradingRouteApiClient.Update("t1", tradingRoute).Dump();
-            await tradingRouteApiClient.Delete("t1");
+            await tradingRouteApiClient.Update("t1", new TradingRouteUpsertRequestParams
+            {
+                TradingRoute = tradingRoute, Traceability = GetRequestParams(),
+            }).Dump();
+            await tradingRouteApiClient.Delete("t1", GetRequestParams());
         }
 
         [CanBeNull]
@@ -271,5 +318,10 @@ namespace MarginTrading.SettingsService.TestClient
             await o;
             "ok".Dump();
         }
+        
+        private static TraceableRequestParams GetRequestParams() => new TraceableRequestParams
+        {
+            EventTimestamp = DateTime.UtcNow,
+        };
     }
 }

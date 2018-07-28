@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using MarginTrading.SettingsService.Contracts.Common;
 using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
@@ -10,7 +11,6 @@ namespace MarginTrading.SettingsService.Contracts
         /// <summary>
         /// Get current service state
         /// </summary>
-        /// <returns></returns>
         [Get("/api/service/maintenance")]
         Task<bool> Get();
 
@@ -18,10 +18,8 @@ namespace MarginTrading.SettingsService.Contracts
         /// <summary>
         /// Switch maintenance mode
         /// </summary>
-        /// <param name="enabled"></param>
-        /// <returns></returns>
         [Post("/api/service/maintenance")]
-        Task<bool> Post([Body] bool enabled);
+        Task<bool> Post([Query] bool enabled, [NotNull] [Body] TraceableRequestParams @params);
 
     }
 }

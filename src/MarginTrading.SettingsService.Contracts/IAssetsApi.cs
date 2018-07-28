@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using MarginTrading.SettingsService.Contracts.Asset;
+using MarginTrading.SettingsService.Contracts.Common;
 using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
@@ -14,7 +15,7 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Post("/api/assets")]
-        Task<AssetContract> Insert([Body] AssetContract asset);
+        Task<AssetContract> Insert([NotNull] [Body] AssetUpsertRequestParams @params);
 
         
         [ItemCanBeNull]
@@ -23,11 +24,11 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Put("/api/assets/{assetId}")]
-        Task<AssetContract> Update([NotNull] string assetId, [Body] AssetContract asset);
+        Task<AssetContract> Update([NotNull] string assetId, [NotNull] [Body] AssetUpsertRequestParams @params);
 
 
         [Delete("/api/assets/{assetId}")]
-        Task Delete([NotNull] string assetId);
+        Task Delete([NotNull] string assetId, [NotNull] [Body] TraceableRequestParams @params);
 
     }
 }

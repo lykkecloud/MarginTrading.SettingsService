@@ -58,5 +58,10 @@ namespace MarginTrading.SettingsService.Services
                 _log.WriteError(nameof(EventSender), message.ToJson(), ex);
             }
         }
+
+        public async Task SendSettingsChangedEvent(string route, SettingsChangedSourceType sourceType)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

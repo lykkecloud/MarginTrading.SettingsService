@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Scheduling;
 using Refit;
 
@@ -14,7 +15,7 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Post("/api/scheduleSettings")]
-        Task<ScheduleSettingsContract> Insert([Body] ScheduleSettingsContract scheduleSetting);
+        Task<ScheduleSettingsContract> Insert([NotNull] [Body] ScheduleSettingsUpsertRequestParams @params);
 
 
         [ItemCanBeNull]
@@ -25,11 +26,11 @@ namespace MarginTrading.SettingsService.Contracts
         [Put("/api/scheduleSettings/{settingId}")]
         Task<ScheduleSettingsContract> Update(
             [NotNull] string settingId,
-            [Body] ScheduleSettingsContract scheduleSetting);
+            [NotNull] [Body] ScheduleSettingsUpsertRequestParams @params);
 
 
         [Delete("/api/scheduleSettings/{settingId}")]
-        Task Delete([NotNull] string settingId);
+        Task Delete([NotNull] string settingId, [NotNull] [Body] TraceableRequestParams @params);
 
 
         /// <summary>

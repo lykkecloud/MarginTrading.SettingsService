@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Enums;
 using MarginTrading.SettingsService.Contracts.Routes;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
+using MarginTrading.SettingsService.Extensions;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -47,7 +49,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of trading routes
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<MatchingEngineRouteContract>> List()
@@ -60,30 +61,31 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new trading route
         /// </summary>
-        /// <param name="route"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<MatchingEngineRouteContract> Insert([FromBody] MatchingEngineRouteContract route)
+        public async Task<MatchingEngineRouteContract> Insert([FromBody] TradingRouteUpsertRequestParams @params)
         {
-            await ValidateRoute(route);
+            @params?.Traceability.Validate();
+            await ValidateRoute(@params.TradingRoute);
 
             if (!await _tradingRoutesRepository.TryInsertAsync(
-                _convertService.Convert<MatchingEngineRouteContract, TradingRoute>(route)))
+                _convertService.Convert<MatchingEngineRouteContract, TradingRoute>(@params.TradingRoute)))
             {
-                throw new ArgumentException($"Trading route with id {route.Id} already exists", nameof(route.Id));
+                throw new ArgumentException($"Trading route with id {@params.TradingRoute.Id} already exists", nameof(@params.TradingRoute.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingRoute);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingRoute);
 
-            return route;
+            return @params.TradingRoute;
         }
 
         /// <summary>
         /// Get the trading route
         /// </summary>
-        /// <param name="routeId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{routeId}")]
         public async Task<MatchingEngineRouteContract> Get(string routeId)
@@ -96,24 +98,26 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the trading route
         /// </summary>
-        /// <param name="routeId"></param>
-        /// <param name="route"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{routeId}")]
         public async Task<MatchingEngineRouteContract> Update(string routeId, 
-            [FromBody] MatchingEngineRouteContract route)
+            [FromBody] TradingRouteUpsertRequestParams @params)
         {
-            await ValidateRoute(route);
+            @params?.Traceability.Validate();
+            await ValidateRoute(@params.TradingRoute);
             
-            ValidateId(routeId, route);
+            ValidateId(routeId, @params.TradingRoute);
             
             await _tradingRoutesRepository.UpdateAsync(
-                _convertService.Convert<MatchingEngineRouteContract, TradingRoute>(route));
+                _convertService.Convert<MatchingEngineRouteContract, TradingRoute>(@params.TradingRoute));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingRoute);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingRoute);
             
-            return route;
+            return @params.TradingRoute;
         }
 
         /// <summary>
@@ -123,11 +127,15 @@ namespace MarginTrading.SettingsService.Controllers
         /// <returns></returns>
         [HttpDelete]
         [Route("{routeId}")]
-        public async Task Delete(string routeId)
+        public async Task Delete(string routeId, TraceableRequestParams @params)
         {
             await _tradingRoutesRepository.DeleteAsync(routeId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.TradingRoute);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.TradingRoute);
         }
 
         private async Task ValidateRoute(MatchingEngineRouteContract route)

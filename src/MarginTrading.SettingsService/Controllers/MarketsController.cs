@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Market;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
+using MarginTrading.SettingsService.Extensions;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -35,7 +37,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of Markets
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<MarketContract>> List()
@@ -48,29 +49,30 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new market
         /// </summary>
-        /// <param name="market"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<MarketContract> Insert([FromBody] MarketContract market)
+        public async Task<MarketContract> Insert([FromBody] MarketUpsertRequestParams @params)
         {
-            Validate(market);
+            @params?.Traceability.Validate();
+            Validate(@params.Market);
 
-            if (!await _marketRepository.TryInsertAsync(_convertService.Convert<MarketContract, Market>(market)))
+            if (!await _marketRepository.TryInsertAsync(_convertService.Convert<MarketContract, Market>(@params.Market)))
             {
-                throw new ArgumentException($"Market with id {market.Id} already exists", nameof(market.Id));
+                throw new ArgumentException($"Market with id {@params.Market.Id} already exists", nameof(@params.Market.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Market);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Market);
 
-            return market;
+            return @params.Market;
         }
 
         /// <summary>
         /// Get the market
         /// </summary>
-        /// <param name="marketId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{marketId}")]
         public async Task<MarketContract> Get(string marketId)
@@ -83,35 +85,41 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the market
         /// </summary>
-        /// <param name="marketId"></param>
-        /// <param name="market"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{marketId}")]
-        public async Task<MarketContract> Update(string marketId, [FromBody] MarketContract market)
+        public async Task<MarketContract> Update(string marketId, [FromBody] MarketUpsertRequestParams @params)
         {
-            Validate(market);
-            ValidateId(marketId, market);
+            @params?.Traceability.Validate();
+            Validate(@params.Market);
+            ValidateId(marketId, @params.Market);
 
-            await _marketRepository.UpdateAsync(_convertService.Convert<MarketContract, Market>(market));
+            await _marketRepository.UpdateAsync(_convertService.Convert<MarketContract, Market>(@params.Market));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Market);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Market);
             
-            return market;
+            return @params.Market;
         }
 
         /// <summary>
         /// Delete the market
         /// </summary>
-        /// <param name="marketId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{marketId}")]
-        public async Task Delete(string marketId)
+        public async Task Delete(string marketId, [FromBody] TraceableRequestParams @params)
         {
+            @params.Validate();
+            
             await _marketRepository.DeleteAsync(marketId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.Market);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.Market);
         }
 
         private void ValidateId(string id, MarketContract contract)

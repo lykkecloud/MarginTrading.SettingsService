@@ -4,10 +4,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using MarginTrading.SettingsService.Contracts;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.Scheduling;
 using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
+using MarginTrading.SettingsService.Extensions;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -42,7 +44,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of schedule settings
         /// </summary>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<ScheduleSettingsContract>> List()
@@ -57,31 +58,32 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Create new schedule setting
         /// </summary>
-        /// <param name="scheduleSetting"></param>
-        /// <returns></returns>
         [HttpPost]
         [Route("")]
-        public async Task<ScheduleSettingsContract> Insert([FromBody] ScheduleSettingsContract scheduleSetting)
+        public async Task<ScheduleSettingsContract> Insert([FromBody] ScheduleSettingsUpsertRequestParams @params)
         {
-            await ValidateScheduleSettings(scheduleSetting);
+            @params?.Traceability.Validate();
+            await ValidateScheduleSettings(@params.ScheduleSettings);
 
             if (!await _scheduleSettingsRepository.TryInsertAsync(
-                _convertService.Convert<ScheduleSettingsContract, ScheduleSettings>(scheduleSetting)))
+                _convertService.Convert<ScheduleSettingsContract, ScheduleSettings>(@params.ScheduleSettings)))
             {
-                throw new ArgumentException($"Schedule setting with id {scheduleSetting.Id} already exists",
-                    nameof(scheduleSetting.Id));
+                throw new ArgumentException($"Schedule settings with id {@params.ScheduleSettings.Id} already exists",
+                    nameof(@params.ScheduleSettings.Id));
             }
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.ScheduleSettings);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.ScheduleSettings);
 
-            return scheduleSetting;
+            return @params.ScheduleSettings;
         }
 
         /// <summary>
         /// Get the schedule setting
         /// </summary>
-        /// <param name="settingId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("{settingId}")]
         public async Task<ScheduleSettingsContract> Get(string settingId)
@@ -94,45 +96,50 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Update the schedule setting
         /// </summary>
-        /// <param name="settingId"></param>
-        /// <param name="scheduleSetting"></param>
-        /// <returns></returns>
         [HttpPut]
         [Route("{settingId}")]
         public async Task<ScheduleSettingsContract> Update(string settingId, 
-            [FromBody] ScheduleSettingsContract scheduleSetting)
+            [FromBody] ScheduleSettingsUpsertRequestParams @params)
         {
-            await ValidateScheduleSettings(scheduleSetting);
+            @params?.Traceability.Validate();
+            await ValidateScheduleSettings(@params.ScheduleSettings);
             
-            ValidateId(settingId, scheduleSetting);
+            ValidateId(settingId, @params.ScheduleSettings);
             
             await _scheduleSettingsRepository.UpdateAsync(
-                _convertService.Convert<ScheduleSettingsContract, ScheduleSettings>(scheduleSetting));
+                _convertService.Convert<ScheduleSettingsContract, ScheduleSettings>(@params.ScheduleSettings));
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.ScheduleSettings);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.Traceability.ExtractCorrelationId(), 
+                @params.Traceability.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.ScheduleSettings);
             
-            return scheduleSetting;
+            return @params.ScheduleSettings;
         }
 
         /// <summary>
         /// Delete the schedule setting
         /// </summary>
-        /// <param name="settingId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{settingId}")]
-        public async Task Delete(string settingId)
+        public async Task Delete(string settingId, [FromBody] TraceableRequestParams @params)
         {
+            @params.Validate();
+            
             await _scheduleSettingsRepository.DeleteAsync(settingId);
 
-            await _eventSender.SendSettingsChangedEvent($"{Request.Path}", SettingsChangedSourceType.ScheduleSettings);
+            await _eventSender.SendSettingsChangedEvent(
+                @params.ExtractCorrelationId(), 
+                @params.ExtractCausationId(),
+                $"{Request.Path}", 
+                SettingsChangedSourceType.ScheduleSettings);
         }
 
         /// <summary>
         /// Get the list of compiled schedule settings based on array of asset pairs
         /// </summary>
         /// <param name="assetPairIds">Null by default</param>
-        /// <returns></returns>
         [HttpPost]
         [Route("compiled")]
         public async Task<List<CompiledScheduleContract>> StateList([FromBody] string[] assetPairIds)

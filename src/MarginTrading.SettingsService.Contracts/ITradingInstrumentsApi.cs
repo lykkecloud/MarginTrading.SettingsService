@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using MarginTrading.SettingsService.Contracts.Common;
 using MarginTrading.SettingsService.Contracts.TradingConditions;
+using MarginTrading.SettingsService.Contracts.TradingInstruments;
 using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
@@ -14,19 +16,16 @@ namespace MarginTrading.SettingsService.Contracts
 
 
         [Post("/api/tradingInstruments")]
-        Task<TradingInstrumentContract> Insert([Body] TradingInstrumentContract instrument);
+        Task<TradingInstrumentContract> Insert([NotNull, Body] TradingInstrumentUpsertRequestParams @params);
 
 
         /// <summary>
         /// Assign trading instrument to a trading condition with default values
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <param name="instruments"></param>
-        /// <returns></returns>
         [Post("/api/tradingInstruments/{tradingConditionId}")]
         Task<List<TradingInstrumentContract>> AssignCollection(
             [NotNull] string tradingConditionId,
-            [Body] string[] instruments);
+            [NotNull, Body] TradingInstrumentAssignCollectionRequestParams @params);
         
 
         [ItemCanBeNull]
@@ -40,13 +39,14 @@ namespace MarginTrading.SettingsService.Contracts
         Task<TradingInstrumentContract> Update(
             [NotNull] string tradingConditionId,
             [NotNull] string assetPairId,
-            [Body] TradingInstrumentContract instrument);
+            [NotNull, Body] TradingInstrumentUpsertRequestParams @params);
 
 
         [Delete("/api/tradingInstruments/{tradingConditionId}/{assetPairId}")]
         Task Delete(
             [NotNull] string tradingConditionId,
-            [NotNull] string assetPairId);
+            [NotNull] string assetPairId,
+            [NotNull, Body] TraceableRequestParams @params);
 
     }
 }
