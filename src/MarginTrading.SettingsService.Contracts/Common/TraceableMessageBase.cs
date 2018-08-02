@@ -18,7 +18,8 @@ namespace MarginTrading.SettingsService.Contracts.Common
         [NotNull]
         [Key(0)]
         public string Id { get; set; }
-         
+
+        private string _correlationId;
         /// <summary>
         /// The correlation identifier.
         /// In every operation that results in the creation of a new message the correlationId should be copied from
@@ -27,7 +28,10 @@ namespace MarginTrading.SettingsService.Contracts.Common
         /// </summary>
         [CanBeNull]
         [Key(1)]
-        public string CorrelationId { get; set; }
+        public string CorrelationId {
+            get => _correlationId;
+            set => _correlationId = string.IsNullOrWhiteSpace(value) ? Guid.NewGuid().ToString("N") : value;
+        }
         
         /// <summary>
         /// The causation identifier.
@@ -50,7 +54,7 @@ namespace MarginTrading.SettingsService.Contracts.Common
             DateTime eventTimestamp)
         {
             Id = Guid.NewGuid().ToString("N");
-            CorrelationId = string.IsNullOrWhiteSpace(correlationId) ? Guid.NewGuid().ToString("N") : correlationId;
+            CorrelationId = correlationId;
             CausationId = causationId;
             EventTimestamp = eventTimestamp;
         }
@@ -59,6 +63,7 @@ namespace MarginTrading.SettingsService.Contracts.Common
         /// For serialization only!
         /// </summary>
         [SerializationConstructor]
+        [UsedImplicitly]
         public TraceableMessageBase()
         {
         }
