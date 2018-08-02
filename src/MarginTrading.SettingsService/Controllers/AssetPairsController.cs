@@ -11,6 +11,7 @@ using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Core.Settings;
 using MarginTrading.SettingsService.Extensions;
+using MarginTrading.SettingsService.Middleware;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ namespace MarginTrading.SettingsService.Controllers
     /// Asset pairs management
     /// </summary>
     [Route("api/assetPairs")]
+    [MiddlewareFilter(typeof(RequestLoggingPipeline))]
     public class AssetPairsController : Controller, IAssetPairsApi
     {
         private readonly IAssetsRepository _assetsRepository;
@@ -80,8 +82,8 @@ namespace MarginTrading.SettingsService.Controllers
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.AssetPair);
             
@@ -116,8 +118,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _assetPairsRepository.UpdateAsync(_convertService.Convert<AssetPairContract, AssetPair>(@params.AssetPair));
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.AssetPair);
             
@@ -136,8 +138,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _assetPairsRepository.DeleteAsync(assetPairId);
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.ExtractCorrelationId(), 
-                @params.ExtractCausationId(),
+                @params.CorrelationId, 
+                @params.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.AssetPair);
         }

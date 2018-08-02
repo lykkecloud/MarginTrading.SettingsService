@@ -71,9 +71,11 @@ namespace MarginTrading.SettingsService
                 var builder = new ContainerBuilder();
                 var appSettings = Configuration.LoadSettings<AppSettings>();
 
-                Log = CreateLogWithSlack(services, appSettings);
+                var logs = CreateLogsWithSlack(services, appSettings);
+                Log = logs.Log;
 
-                builder.RegisterModule(new ServiceModule(appSettings.Nested(x => x.MarginTradingSettingsService), Log));
+                builder.RegisterModule(new ServiceModule(appSettings.Nested(x => x.MarginTradingSettingsService), Log,
+                    logs.RequestLogger));
                 builder.Populate(services);
                 ApplicationContainer = builder.Build();
 
@@ -175,10 +177,12 @@ namespace MarginTrading.SettingsService
             }
         }
 
-        private static ILog CreateLogWithSlack(IServiceCollection services, IReloadingManager<AppSettings> settings)
+        private static (ILog Log, RequestLogger RequestLogger) CreateLogsWithSlack(
+            IServiceCollection services, IReloadingManager<AppSettings> settings)
         {
             var consoleLogger = new LogToConsole();
             var aggregateLogger = new AggregateLogger();
+            var requestLogger = new RequestLogger(new LogToConsole());
 
             aggregateLogger.AddLog(consoleLogger);
             
@@ -191,8 +195,10 @@ namespace MarginTrading.SettingsService
                 
                 var sqlLogger = new LogToSql(new LogRepository("SettingsServiceLog",
                     settings.CurrentValue.MarginTradingSettingsService.Db.SqlConnectionString));
-
                 aggregateLogger.AddLog(sqlLogger);
+                
+                requestLogger.AddLog(new LogToSql(new LogRepository("SettingsServiceRequestsLog",
+                        settings.CurrentValue.MarginTradingSettingsService.Db.SqlConnectionString)));
             } 
             else if (settings.CurrentValue.MarginTradingSettingsService.Db.StorageMode == StorageMode.Azure)
             {
@@ -207,9 +213,9 @@ namespace MarginTrading.SettingsService
 
                 if (string.IsNullOrEmpty(dbLogConnectionString))
                 {
-                    consoleLogger.WriteWarningAsync(nameof(Startup), nameof(CreateLogWithSlack),
-                        "Table loggger is not inited").Wait();
-                    return aggregateLogger;
+                    consoleLogger.WriteWarningAsync(nameof(Startup), nameof(CreateLogsWithSlack),
+                        "Table logger is not initiated").Wait();
+                    return (aggregateLogger, requestLogger);
                 }
 
                 if (dbLogConnectionString.StartsWith("${") && dbLogConnectionString.EndsWith("}"))
@@ -235,7 +241,7 @@ namespace MarginTrading.SettingsService
                         new LykkeLogToAzureSlackNotificationsManager(slackService, consoleLogger);
                 }
 
-                // Creating azure storage logger, which logs own messages to concole log
+                // Creating azure storage logger, which logs own messages to console log
                 var azureStorageLogger = new LykkeLogToAzureStorage(
                     persistenceManager,
                     slackNotificationsManager,
@@ -244,9 +250,12 @@ namespace MarginTrading.SettingsService
                 azureStorageLogger.Start();
 
                 aggregateLogger.AddLog(azureStorageLogger);
+                requestLogger.AddLog(services.UseLogToAzureStorage(
+                    settings.Nested(s => s.MarginTradingSettingsService.Db.LogsAzureConnString),
+                    null, "SettingsServiceRequestsLog", consoleLogger));
             }
 
-            return aggregateLogger;
+            return (aggregateLogger, requestLogger);
         }
     }
 }

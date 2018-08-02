@@ -25,7 +25,7 @@ namespace MarginTrading.SettingsService.Contracts.Common
         /// the inbound message to the outbound message. This facilitates tracking of an operation through the system.
         /// If there is no inbound identifier then one should be created eg. on the service layer boundary (API).  
         /// </summary>
-        [NotNull]
+        [CanBeNull]
         [Key(1)]
         public string CorrelationId { get; set; }
         
@@ -46,11 +46,11 @@ namespace MarginTrading.SettingsService.Contracts.Common
         [Key(3)]
         public DateTime EventTimestamp { get; set; }
 
-        public TraceableMessageBase([NotNull] string correlationId, [CanBeNull] string causationId,
+        public TraceableMessageBase([CanBeNull] string correlationId, [CanBeNull] string causationId,
             DateTime eventTimestamp)
         {
             Id = Guid.NewGuid().ToString("N");
-            CorrelationId = correlationId;
+            CorrelationId = string.IsNullOrWhiteSpace(correlationId) ? Guid.NewGuid().ToString("N") : correlationId;
             CausationId = causationId;
             EventTimestamp = eventTimestamp;
         }

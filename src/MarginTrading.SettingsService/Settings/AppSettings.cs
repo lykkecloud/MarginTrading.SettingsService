@@ -9,6 +9,7 @@ namespace MarginTrading.SettingsService.Settings
     public class AppSettings
     {
         public MarginTradingSettingsServiceSettings MarginTradingSettingsService { get; set; }
+        
         [Optional, CanBeNull] public SlackNotificationsSettings SlackNotifications { get; set; }
     }
 }

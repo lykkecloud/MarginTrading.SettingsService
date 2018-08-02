@@ -10,6 +10,7 @@ using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Extensions;
+using MarginTrading.SettingsService.Middleware;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,7 @@ namespace MarginTrading.SettingsService.Controllers
     /// Trading route management
     /// </summary>
     [Route("api/routes")]
+    [MiddlewareFilter(typeof(RequestLoggingPipeline))]
     public class TradingRoutesController : Controller, ITradingRoutesApi
     {
         private readonly IAssetsRepository _assetsRepository;
@@ -75,8 +77,8 @@ namespace MarginTrading.SettingsService.Controllers
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingRoute);
 
@@ -112,8 +114,8 @@ namespace MarginTrading.SettingsService.Controllers
                 _convertService.Convert<MatchingEngineRouteContract, TradingRoute>(@params.TradingRoute));
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingRoute);
             
@@ -132,8 +134,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _tradingRoutesRepository.DeleteAsync(routeId);
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.ExtractCorrelationId(), 
-                @params.ExtractCausationId(),
+                @params.CorrelationId, 
+                @params.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingRoute);
         }

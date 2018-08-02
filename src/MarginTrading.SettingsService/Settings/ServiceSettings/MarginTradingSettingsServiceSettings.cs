@@ -10,5 +10,6 @@ namespace MarginTrading.SettingsService.Settings.ServiceSettings
         public RabbitMqSettings SettingsChangedRabbitMqSettings { get; set; }
         public DefaultTradingInstrumentSettings TradingInstrumentDefaults { get; set; }
         public DefaultLegalEntitySettings LegalEntityDefaults { get; set; }
+        public RequestLoggerSettings RequestLoggerSettings { get; set; }
     }
 }

@@ -10,6 +10,7 @@ using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Extensions;
+using MarginTrading.SettingsService.Middleware;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -19,6 +20,7 @@ namespace MarginTrading.SettingsService.Controllers
     /// Assets management
     /// </summary>
     [Route("api/assets")]
+    [MiddlewareFilter(typeof(RequestLoggingPipeline))]
     public class AssetsController : Controller, IAssetsApi
     {
         private readonly IAssetsRepository _assetsRepository;
@@ -63,8 +65,8 @@ namespace MarginTrading.SettingsService.Controllers
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Asset);
 
@@ -97,8 +99,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _assetsRepository.UpdateAsync(_convertService.Convert<AssetContract, Asset>(@params.Asset));
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Asset);
             
@@ -117,8 +119,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _assetsRepository.DeleteAsync(assetId);
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.ExtractCorrelationId(), 
-                @params.ExtractCausationId(),
+                @params.CorrelationId, 
+                @params.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Asset);
         }

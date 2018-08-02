@@ -11,6 +11,7 @@ using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Core.Settings;
 using MarginTrading.SettingsService.Extensions;
+using MarginTrading.SettingsService.Middleware;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,6 +21,7 @@ namespace MarginTrading.SettingsService.Controllers
     /// Trading instruments management
     /// </summary>
     [Route("api/tradingInstruments")]
+    [MiddlewareFilter(typeof(RequestLoggingPipeline))]
     public class TradingInstrumentsController : Controller, ITradingInstrumentsApi
     {
         private readonly IAssetsRepository _assetsRepository;
@@ -85,8 +87,8 @@ namespace MarginTrading.SettingsService.Controllers
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingInstrument);
 
@@ -131,8 +133,8 @@ namespace MarginTrading.SettingsService.Controllers
                 pairsToAdd, _defaultTradingInstrumentSettings);
             
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingInstrument);
 
@@ -168,8 +170,8 @@ namespace MarginTrading.SettingsService.Controllers
                 _convertService.Convert<TradingInstrumentContract, TradingInstrument>(@params.TradingInstrument));
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingInstrument);
             
@@ -187,8 +189,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _tradingInstrumentsRepository.DeleteAsync(assetPairId, tradingConditionId);
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.ExtractCorrelationId(), 
-                @params.ExtractCausationId(),
+                @params.CorrelationId, 
+                @params.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.TradingInstrument);
         }

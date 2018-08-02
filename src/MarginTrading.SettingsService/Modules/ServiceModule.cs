@@ -19,13 +19,16 @@ namespace MarginTrading.SettingsService.Modules
     {
         private readonly IReloadingManager<MarginTradingSettingsServiceSettings> _settings;
         private readonly ILog _log;
+        private readonly RequestLogger _requestLogger;
         // NOTE: you can remove it if you don't need to use IServiceCollection extensions to register service specific dependencies
         private readonly IServiceCollection _services;
 
-        public ServiceModule(IReloadingManager<MarginTradingSettingsServiceSettings> settings, ILog log)
+        public ServiceModule(IReloadingManager<MarginTradingSettingsServiceSettings> settings, ILog log,
+            RequestLogger requestLogger)
         {
             _settings = settings;
             _log = log;
+            _requestLogger = requestLogger;
 
             _services = new ServiceCollection();
         }
@@ -33,12 +36,11 @@ namespace MarginTrading.SettingsService.Modules
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterInstance(_log).As<ILog>().SingleInstance();
+            builder.RegisterInstance(_requestLogger).AsSelf().SingleInstance();
 
             builder.RegisterInstance(_settings.CurrentValue.TradingInstrumentDefaults).AsSelf().SingleInstance();
- 
             builder.RegisterInstance(_settings.CurrentValue.LegalEntityDefaults).AsSelf().SingleInstance(); 
-
-            builder.RegisterInstance(_settings.CurrentValue.LegalEntityDefaults).AsSelf().SingleInstance();
+            builder.RegisterInstance(_settings.CurrentValue.RequestLoggerSettings).AsSelf().SingleInstance();
 
             builder.RegisterType<HealthService>().As<IHealthService>().SingleInstance();
 

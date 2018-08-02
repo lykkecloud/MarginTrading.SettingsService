@@ -9,6 +9,7 @@ using MarginTrading.SettingsService.Core.Domain;
 using MarginTrading.SettingsService.Core.Interfaces;
 using MarginTrading.SettingsService.Core.Services;
 using MarginTrading.SettingsService.Extensions;
+using MarginTrading.SettingsService.Middleware;
 using MarginTrading.SettingsService.StorageInterfaces.Repositories;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,7 @@ namespace MarginTrading.SettingsService.Controllers
     /// Markets management
     /// </summary>
     [Route("api/markets")]
+    [MiddlewareFilter(typeof(RequestLoggingPipeline))]
     public class MarketsController : Controller, IMarketsApi
     {
         private readonly IMarketRepository _marketRepository;
@@ -62,8 +64,8 @@ namespace MarginTrading.SettingsService.Controllers
             }
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Market);
 
@@ -96,8 +98,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _marketRepository.UpdateAsync(_convertService.Convert<MarketContract, Market>(@params.Market));
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.Traceability.ExtractCorrelationId(), 
-                @params.Traceability.ExtractCausationId(),
+                @params.Traceability.CorrelationId, 
+                @params.Traceability.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Market);
             
@@ -116,8 +118,8 @@ namespace MarginTrading.SettingsService.Controllers
             await _marketRepository.DeleteAsync(marketId);
 
             await _eventSender.SendSettingsChangedEvent(
-                @params.ExtractCorrelationId(), 
-                @params.ExtractCausationId(),
+                @params.CorrelationId, 
+                @params.Id,
                 $"{Request.Path}", 
                 SettingsChangedSourceType.Market);
         }
