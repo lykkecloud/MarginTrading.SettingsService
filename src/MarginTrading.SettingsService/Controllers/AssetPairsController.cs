@@ -64,6 +64,28 @@ namespace MarginTrading.SettingsService.Controllers
         }
 
         /// <summary>
+        /// Get the list of asset pairs based on legal entity and matching engine mode, with optional pagination
+        /// </summary>
+        [HttpGet]
+        [Route("by-pages")]
+        public async Task<PaginatedResponseContract<AssetPairContract>> ListByPages([FromQuery] string legalEntity = null, 
+            [FromQuery] MatchingEngineModeContract? matchingEngineMode = null, 
+            [FromQuery] int? skip = null, [FromQuery] int? take = null)
+        {
+            ApiValidationHelper.ValidatePagingParams(skip, take);
+            
+            var data = await _assetPairsRepository.GetByLeAndMeModeByPagesAsync(legalEntity, 
+                matchingEngineMode?.ToString(), skip, take);
+            
+            return new PaginatedResponseContract<AssetPairContract>(
+                contents: data.Contents.Select(x => _convertService.Convert<IAssetPair, AssetPairContract>(x)).ToList(),
+                start: data.Start,
+                size: data.Size,
+                totalSize: data.TotalSize
+            );
+        }
+
+        /// <summary>
         /// Create new asset pair
         /// </summary>
         [HttpPost]

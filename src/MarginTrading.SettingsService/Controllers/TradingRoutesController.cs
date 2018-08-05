@@ -61,6 +61,25 @@ namespace MarginTrading.SettingsService.Controllers
         }
 
         /// <summary>
+        /// Get the list of trading routes, with optional pagination
+        /// </summary>
+        [HttpGet]
+        [Route("by-pages")]
+        public async Task<PaginatedResponseContract<MatchingEngineRouteContract>> ListByPages(int? skip = null, int? take = null)
+        {
+            ApiValidationHelper.ValidatePagingParams(skip, take);
+            
+            var data = await _tradingRoutesRepository.GetByPagesAsync(skip, take);
+            
+            return new PaginatedResponseContract<MatchingEngineRouteContract>(
+                contents: data.Contents.Select(x => _convertService.Convert<ITradingRoute, MatchingEngineRouteContract>(x)).ToList(),
+                start: data.Start,
+                size: data.Size,
+                totalSize: data.TotalSize
+            );
+        }
+
+        /// <summary>
         /// Create new trading route
         /// </summary>
         [HttpPost]
@@ -125,8 +144,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Delete the trading route
         /// </summary>
-        /// <param name="routeId"></param>
-        /// <returns></returns>
         [HttpDelete]
         [Route("{routeId}")]
         public async Task Delete(string routeId, TraceableRequestParams @params)

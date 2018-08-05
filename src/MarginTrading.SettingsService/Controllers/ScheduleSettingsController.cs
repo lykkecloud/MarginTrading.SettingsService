@@ -151,7 +151,7 @@ namespace MarginTrading.SettingsService.Controllers
             var allSettings = await allSettingsTask;
             var assetPairs = await assetPairsTask;
             
-            //extract the list of assetpairs with same settings based on regex, market or list
+            //extract the list of assetPairs with same settings based on regex, market or list
             var result = assetPairs.Select(assetPair => new CompiledScheduleContract
             {
                 AssetPairId = assetPair.Id,

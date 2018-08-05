@@ -5,6 +5,9 @@ using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
 {
+    /// <summary>
+    /// MT Core service maintenance management
+    /// </summary>
     [PublicAPI]
     public interface IServiceMaintenanceApi
     {
@@ -13,7 +16,6 @@ namespace MarginTrading.SettingsService.Contracts
         /// </summary>
         [Get("/api/service/maintenance")]
         Task<bool> Get();
-
 
         /// <summary>
         /// Switch maintenance mode

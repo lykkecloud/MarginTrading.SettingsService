@@ -50,6 +50,26 @@ namespace MarginTrading.SettingsService.Controllers
         }
 
         /// <summary>
+        /// Get the list of assets with optional pagination
+        /// </summary>
+        [HttpGet]
+        [Route("by-pages")]
+        public async Task<PaginatedResponseContract<AssetContract>> ListByPages(
+            [FromQuery] int? skip = null, [FromQuery] int? take = null)
+        {
+            ApiValidationHelper.ValidatePagingParams(skip, take);
+            
+            var data = await _assetsRepository.GetByPagesAsync(skip, take);
+            
+            return new PaginatedResponseContract<AssetContract>(
+                contents: data.Contents.Select(x => _convertService.Convert<IAsset, AssetContract>(x)).ToList(),
+                start: data.Start,
+                size: data.Size,
+                totalSize: data.TotalSize
+            );
+        }
+
+        /// <summary>
         /// Create new asset
         /// </summary>
         [HttpPost]

@@ -6,22 +6,34 @@ using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
 {
+    /// <summary>
+    /// Trading conditions management
+    /// </summary>
     [PublicAPI]
     public interface ITradingConditionsApi
     {
+        /// <summary>
+        /// Get the list of trading conditions
+        /// </summary>
         [Get("/api/tradingConditions")]
         Task<List<TradingConditionContract>> List([Query] bool? isDefault = null);
 
-
+        /// <summary>
+        /// Create new trading condition
+        /// </summary>
         [Post("/api/tradingConditions")]
         Task<TradingConditionContract> Insert([NotNull] [Body] TradingConditionUpsertRequestParams @params);
 
-
+        /// <summary>
+        /// Get the trading condition
+        /// </summary>
         [ItemCanBeNull]
         [Get("/api/tradingConditions/{tradingConditionId}")]
         Task<TradingConditionContract> Get([NotNull] string tradingConditionId);
         
-        
+        /// <summary>
+        /// Update the trading condition
+        /// </summary>
         [Put("/api/tradingConditions/{tradingConditionId}")]
         Task<TradingConditionContract> Update(
             [NotNull] string tradingConditionId,

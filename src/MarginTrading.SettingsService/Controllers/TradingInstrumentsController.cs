@@ -56,8 +56,6 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of trading instruments
         /// </summary>
-        /// <param name="tradingConditionId"></param>
-        /// <returns></returns>
         [HttpGet]
         [Route("")]
         public async Task<List<TradingInstrumentContract>> List([FromQuery] string tradingConditionId)
@@ -67,6 +65,26 @@ namespace MarginTrading.SettingsService.Controllers
                 : await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId);
             
             return data.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList();
+        }
+
+        /// <summary>
+        /// Get the list of trading instruments with optional pagination
+        /// </summary>
+        [HttpGet]
+        [Route("by-pages")]
+        public async Task<PaginatedResponseContract<TradingInstrumentContract>> ListByPages(string tradingConditionId, 
+            int? skip = null, int? take = null)
+        {
+            ApiValidationHelper.ValidatePagingParams(skip, take);
+            
+            var data = await _tradingInstrumentsRepository.GetByPagesAsync(tradingConditionId, skip, take);
+            
+            return new PaginatedResponseContract<TradingInstrumentContract>(
+                contents: data.Contents.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList(),
+                start: data.Start,
+                size: data.Size,
+                totalSize: data.TotalSize
+            );
         }
 
         /// <summary>

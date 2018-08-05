@@ -8,13 +8,28 @@ using Refit;
 
 namespace MarginTrading.SettingsService.Contracts
 {
+    /// <summary>
+    /// Asset pairs management
+    /// </summary>
     [PublicAPI]
     public interface IAssetPairsApi
     {
+        /// <summary>
+        /// Get the list of asset pairs based on legal entity and matching engine mode
+        /// </summary>
         [Get("/api/assetPairs")]
         Task<List<AssetPairContract>> List(
             [Query, CanBeNull] string legalEntity = null,
             [Query, CanBeNull] MatchingEngineModeContract? matchingEngineMode = null);
+        
+        /// <summary>
+        /// Get the list of asset pairs based on legal entity and matching engine mode, with optional pagination
+        /// </summary>
+        [Get("/api/assetPairs/by-pages")]
+        Task<PaginatedResponseContract<AssetPairContract>> ListByPages(
+            [Query, CanBeNull] string legalEntity = null,
+            [Query, CanBeNull] MatchingEngineModeContract? matchingEngineMode = null,
+            [Query, CanBeNull] int? skip = null, [Query, CanBeNull] int? take = null);
 
 
         [Post("/api/assetPairs")]
