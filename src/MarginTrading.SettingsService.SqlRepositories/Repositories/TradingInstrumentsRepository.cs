@@ -85,7 +85,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         /// </summary>
         public async Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null,
             int? skip = null, int? take = null)
-        {
+        {//todo think about making real pagination
             var all = tradingConditionId == null
                 ? await GetAsync()
                 : await GetByTradingConditionAsync(tradingConditionId);
