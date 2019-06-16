@@ -65,7 +65,7 @@ namespace MarginTrading.SettingsService.Controllers
             var data = string.IsNullOrWhiteSpace(tradingConditionId)
                 ? await _tradingInstrumentsRepository.GetAsync()
                 : await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId);
-            
+            //todo merge logic
             return data.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList();
         }
 
@@ -80,7 +80,7 @@ namespace MarginTrading.SettingsService.Controllers
             ApiValidationHelper.ValidatePagingParams(skip, take);
             
             var data = await _tradingInstrumentsRepository.GetByPagesAsync(tradingConditionId, skip, take);
-            
+            //todo merge logic
             return new PaginatedResponseContract<TradingInstrumentContract>(
                 contents: data.Contents.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList(),
                 start: data.Start,
@@ -174,14 +174,15 @@ namespace MarginTrading.SettingsService.Controllers
         public async Task<TradingInstrumentContract> Update(string tradingConditionId, string assetPairId, 
             [FromBody] TradingInstrumentContract instrument)
         {
-            await ValidateTradingInstrument(instrument);
+            var tradingCondition = await ValidateTradingInstrument(instrument);
             ValidateId(tradingConditionId, assetPairId, instrument);
 
             await _tradingInstrumentsRepository.UpdateAsync(
                 _convertService.Convert<TradingInstrumentContract, TradingInstrument>(instrument));
 
             await _eventSender.SendSettingsChangedEvent($"{Request.Path}", 
-                SettingsChangedSourceType.TradingInstrument, GetIdContractSerialized(instrument));
+            SettingsChangedSourceType.TradingInstrument, 
+            tradingCondition.IsBase ? null : GetIdContractSerialized(instrument));
             
             return instrument;
         }
@@ -250,11 +251,11 @@ namespace MarginTrading.SettingsService.Controllers
             }
         }
 
-        private async Task ValidateTradingInstrument(TradingInstrumentContract instrument)
+        private async Task<ITradingCondition> ValidateTradingInstrument(TradingInstrumentContract instrument)
         {
             if (instrument == null)
             {
-                throw new ArgumentNullException("instrument", "Model is incorrect");
+                throw new ArgumentNullException(nameof(instrument), "Model is incorrect");
             }
             
             if (string.IsNullOrWhiteSpace(instrument?.TradingConditionId))
@@ -267,7 +268,8 @@ namespace MarginTrading.SettingsService.Controllers
                 throw new ArgumentNullException(nameof(instrument.Instrument), "Instrument must be set");
             }
 
-            if (await _tradingConditionsRepository.GetAsync(instrument.TradingConditionId) == null)
+            var tradingCondition = await _tradingConditionsRepository.GetAsync(instrument.TradingConditionId);
+            if (tradingCondition == null)
             {
                 throw new InvalidOperationException($"Trading condition {instrument.TradingConditionId} does not exist");
             }
@@ -279,18 +281,20 @@ namespace MarginTrading.SettingsService.Controllers
 
             if (instrument.LeverageInit <= 0)
             {
-                throw new InvalidOperationException($"LeverageInit must be greather then zero");
+                throw new InvalidOperationException($"LeverageInit must be greater then zero");
             }
 
             if (instrument.LeverageMaintenance <= 0)
             {
-                throw new InvalidOperationException($"LeverageMaintenance must be greather then zero");
+                throw new InvalidOperationException($"LeverageMaintenance must be greater then zero");
             }
 
             if (await _assetsRepository.GetAsync(instrument.CommissionCurrency) == null)
             {
                 throw new InvalidOperationException($"Commission currency {instrument.CommissionCurrency} does not exist");
             }
+
+            return tradingCondition;
         }
     }
 }

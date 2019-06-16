@@ -12,6 +12,7 @@ namespace MarginTrading.SettingsService.AzureRepositories.Entities
         // Id comes from parent type
         public string Name { get; set; }
         public string LegalEntity { get; set; }
+        public string BaseTradingConditionId { get; set; }
         public decimal MarginCall1 { get; set; }
         public decimal MarginCall2 { get; set; }
         public decimal StopOut { get; set; }
@@ -21,5 +22,6 @@ namespace MarginTrading.SettingsService.AzureRepositories.Entities
         List<string> ITradingCondition.BaseAssets => JsonConvert.DeserializeObject<List<string>>(BaseAssets); 
         public string BaseAssets { get; set; }
         public bool IsDefault { get; set; }
+        public bool IsBase { get; set; }
     }
 }

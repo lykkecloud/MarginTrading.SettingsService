@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 using Common.Log;
 using Dapper;
@@ -20,27 +21,8 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
     public class TradingInstrumentsRepository : ITradingInstrumentsRepository
     {
         private const string TableName = "TradingInstruments";
-        private const string CreateTableScript = "CREATE TABLE [{0}](" +
-                                                 "[Oid] [bigint] NOT NULL IDENTITY(1,1) PRIMARY KEY," +
-                                                 "[TradingConditionId] [nvarchar] (64) NOT NULL, " +
-                                                 "[Instrument] [nvarchar] (64) NOT NULL, " +
-                                                 "[LeverageInit] [int] NULL, " +
-                                                 "[LeverageMaintenance] [int] NULL, " +
-                                                 "[SwapLong] float NULL, " +
-                                                 "[SwapShort] float NULL, " +
-                                                 "[Delta] float NULL, " +
-                                                 "[DealMinLimit] float NULL, " +
-                                                 "[DealMaxLimit] float NULL, " +
-                                                 "[PositionLimit] float NULL, " +
-                                                 "[ShortPosition] bit NULL, " +
-                                                 "[LiquidationThreshold] float NULL, " +
-                                                 "[OvernightMarginMultiplier] float NULL, " +
-                                                 "[CommissionRate] float NULL, " +
-                                                 "[CommissionMin] float NULL, " +
-                                                 "[CommissionMax] float NULL, " +
-                                                 "[CommissionCurrency] [nvarchar] (64) NULL, " +
-                                                 "INDEX IX_{0}_Base (TradingConditionId, Instrument)" +
-                                                 ");";
+        private const string GetProcName = "CompileAndGetTradingInstrument";
+        private const string GetAllByTradingConditionProcName = "CompileAndGetAllTradingInstruments";
         
         private static Type DataType => typeof(ITradingInstrument);
         private static readonly string GetColumns = "[" + string.Join("],[", DataType.GetProperties().Select(x => x.Name)) + "]";
@@ -57,24 +39,29 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             _convertService = convertService;
             _log = log;
             _connectionString = connectionString;
-            
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                try { conn.CreateTableIfDoesntExists(CreateTableScript, TableName); }
-                catch (Exception ex)
-                {
-                    _log?.WriteErrorAsync(nameof(TradingInstrumentsRepository), "CreateTableIfDoesntExists", null, ex);
-                    throw;
-                }
-            }
+
+            var projectPath = GetType().Assembly.GetName().Name;
+            connectionString.InitializeSqlObject("TableTradingInstruments.sql", projectPath, log);
+            connectionString.InitializeSqlObject("ProcGetTradingInstrument.sql", projectPath, log);
+            connectionString.InitializeSqlObject("ProcGetAllTradingInstruments.sql", projectPath, log);
         }
 
         public async Task<IReadOnlyList<ITradingInstrument>> GetAsync()
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var objects = await conn.QueryAsync<TradingInstrumentEntity>(
-                    $"SELECT * FROM {TableName}");
+                var tradingConditions = await conn.QueryAsync<string>(
+                    $"SELECT Id FROM {TradingConditionsRepository.TableName}");
+
+                var objects = new List<TradingInstrumentEntity>();
+                foreach (var tradingCondition in tradingConditions)
+                {
+                    var data = await conn.QueryAsync<TradingInstrumentEntity>(
+                        GetAllByTradingConditionProcName,
+                        new {TradingConditionId = tradingCondition},
+                        commandType: CommandType.StoredProcedure);
+                    objects.AddRange(data);
+                }
                 
                 return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).ToList();
             }
@@ -85,35 +72,32 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             using (var conn = new SqlConnection(_connectionString))
             {
                 var objects = await conn.QueryAsync<TradingInstrumentEntity>(
-                    $"SELECT * FROM {TableName} WHERE TradingConditionId=@tradingConditionId",
-                    new {tradingConditionId});
+                    GetAllByTradingConditionProcName,
+                    new {TradingConditionId = tradingConditionId},
+                    commandType: CommandType.StoredProcedure);
                 
                 return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).ToList();
             }
         }
 
-        public async Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null, 
+        /// <summary>
+        /// It's not paginated implementation - it just takes all, and filter in-mem.
+        /// </summary>
+        public async Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null,
             int? skip = null, int? take = null)
         {
-            var whereClause = "WHERE 1=1 "
-                              + (string.IsNullOrWhiteSpace(tradingConditionId) ? "" : " AND TradingConditionId=@tradingConditionId");
-            
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                var paginationClause = $" ORDER BY [Oid] OFFSET {skip ?? 0} ROWS FETCH NEXT {PaginationHelper.GetTake(take)} ROWS ONLY";
-                var gridReader = await conn.QueryMultipleAsync(
-                    $"SELECT * FROM {TableName} {whereClause} {paginationClause}; SELECT COUNT(*) FROM {TableName} {whereClause}",
-                    new {tradingConditionId});
-                var tradingInstruments = (await gridReader.ReadAsync<TradingInstrumentEntity>()).ToList();
-                var totalCount = await gridReader.ReadSingleAsync<int>();
-             
-                return new PaginatedResponse<ITradingInstrument>(
-                    contents: tradingInstruments, 
-                    start: skip ?? 0, 
-                    size: tradingInstruments.Count, 
-                    totalSize: totalCount
-                );
-            }
+            var all = tradingConditionId == null
+                ? await GetAsync()
+                : await GetByTradingConditionAsync(tradingConditionId);
+
+            var tradingInstruments = all.Skip(skip ?? 0).Take(PaginationHelper.GetTake(take)).ToList();
+
+            return new PaginatedResponse<ITradingInstrument>(
+                contents: tradingInstruments,
+                start: skip ?? 0,
+                size: tradingInstruments.Count,
+                totalSize: all.Count
+            );
         }
 
         public async Task<ITradingInstrument> GetAsync(string assetPairId, string tradingConditionId)
@@ -121,8 +105,9 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             using (var conn = new SqlConnection(_connectionString))
             {
                 var objects = await conn.QueryAsync<TradingInstrumentEntity>(
-                    $"SELECT * FROM {TableName} WHERE TradingConditionId=@tradingConditionId AND Instrument=@assetPairId",
-                    new {tradingConditionId, assetPairId});
+                    GetProcName,
+                    new {TradingConditionId = tradingConditionId},
+                    commandType: CommandType.StoredProcedure);
                 
                 return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).FirstOrDefault();
             }

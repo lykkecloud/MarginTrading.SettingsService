@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,23 +16,9 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
 {
     public class TradingConditionsRepository : ITradingConditionsRepository
     {
-        private const string TableName = "TradingConditions";
-        private const string CreateTableScript = "CREATE TABLE [{0}](" +
-                                                 "[Oid] [bigint] NOT NULL IDENTITY(1,1) PRIMARY KEY," +
-                                                 "[Id] [nvarchar] (64) NOT NULL, " +
-                                                 "[Name] [nvarchar] (64) NOT NULL, " +
-                                                 "[LegalEntity] [nvarchar] (64) NULL, " +
-                                                 "[MarginCall1] float NULL, " +
-                                                 "[MarginCall2] float NULL, " +
-                                                 "[StopOut] float NULL, " +
-                                                 "[DepositLimit] float NULL, " +
-                                                 "[WithdrawalLimit] float NULL, " +
-                                                 "[LimitCurrency] [nvarchar] (64) NULL, " +
-                                                 "[BaseAssets] [nvarchar] (MAX) NULL, " +
-                                                 "[IsDefault] [bit] NOT NULL, " +
-                                                 "CONSTRAINT {0}_Id UNIQUE(Id)," +
-                                                 "INDEX IX_{0}_Default (IsDefault)" +
-                                                 ");";
+        public const string TableName = "TradingConditions";
+        private const string InsertProcName = "InsertTradingCondition";
+        private const string UpdateProcName = "UpdateTradingCondition";
         
         private static Type DataType => typeof(ITradingCondition);
         private static readonly string GetColumns = "[" + string.Join("],[", DataType.GetProperties().Select(x => x.Name)) + "]";
@@ -49,15 +36,10 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             _log = log;
             _connectionString = connectionString;
             
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                try { conn.CreateTableIfDoesntExists(CreateTableScript, TableName); }
-                catch (Exception ex)
-                {
-                    _log?.WriteErrorAsync(nameof(TradingConditionsRepository), "CreateTableIfDoesntExists", null, ex);
-                    throw;
-                }
-            }
+            var projectPath = GetType().Assembly.GetName().Name;
+            connectionString.InitializeSqlObject("TableTradingConditions.sql", projectPath, log);
+            connectionString.InitializeSqlObject("ProcInsertTradingCondition.sql", projectPath, log);
+            connectionString.InitializeSqlObject("ProcUpdateTradingCondition.sql", projectPath, log);
         }
 
         public async Task<IReadOnlyList<ITradingCondition>> GetAsync()
@@ -98,14 +80,13 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             {
                 try
                 {
-                    await conn.ExecuteAsync(
-                        $"insert into {TableName} ({GetColumns}) values ({GetFields})",
-                        _convertService.Convert<ITradingCondition, TradingConditionEntity>(tradingCondition));
+                    await conn.ExecuteAsync(InsertProcName, tradingCondition,
+                        commandType: CommandType.StoredProcedure);
                 }
                 catch (Exception ex)
                 {
                     _log?.WriteWarningAsync(nameof(AssetPairsRepository), nameof(TryInsertAsync),
-                        $"Failed to insert a trading condition with Id {tradingCondition.Id}", ex);
+                        $"Failed to insert a trading condition with Id {tradingCondition.Id}", ex).Wait();
                     return false;
                 }
 
@@ -117,9 +98,8 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                await conn.ExecuteAsync(
-                    $"update {TableName} set {GetUpdateClause} where Id=@Id", 
-                    _convertService.Convert<ITradingCondition, TradingConditionEntity>(tradingCondition));
+                await conn.ExecuteAsync(UpdateProcName, tradingCondition,
+                    commandType: CommandType.StoredProcedure);
             }
         }
     }

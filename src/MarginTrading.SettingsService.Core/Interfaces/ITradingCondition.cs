@@ -7,6 +7,7 @@ namespace MarginTrading.SettingsService.Core.Interfaces
         string Id { get; }
         string Name { get; }
         string LegalEntity { get; }
+        string BaseTradingConditionId { get; }
         decimal MarginCall1 { get; }
         decimal MarginCall2 { get; }
         decimal StopOut { get; }
@@ -15,5 +16,6 @@ namespace MarginTrading.SettingsService.Core.Interfaces
         string LimitCurrency { get; }
         List<string> BaseAssets { get; }
         bool IsDefault { get; }
+        bool IsBase { get; }
     }
 }

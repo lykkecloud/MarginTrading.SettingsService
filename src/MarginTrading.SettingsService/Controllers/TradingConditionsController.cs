@@ -64,12 +64,31 @@ namespace MarginTrading.SettingsService.Controllers
         [HttpPost]
         [Route("")]
         public async Task<TradingConditionContract> Insert([FromBody] TradingConditionContract tradingCondition)
-        {
+        {   
             await ValidateTradingCondition(tradingCondition);
-            
-            var defaultTradingCondition =
-                (await _tradingConditionsRepository.GetDefaultAsync()).FirstOrDefault();
 
+            if (await _tradingConditionsRepository.GetAsync(tradingCondition.Id) != null)
+            {
+                throw new ArgumentException($"Trading condition {tradingCondition.Id} already exists");
+            }
+            
+            _defaultLegalEntitySettings.Set(tradingCondition);
+
+            if (tradingCondition.IsDefault && !tradingCondition.IsBase)
+            {
+                throw new ArgumentException("Only base trading condition may be default", 
+                    nameof(tradingCondition.IsBase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(tradingCondition.BaseTradingConditionId) && tradingCondition.IsBase)
+            {
+                throw new ArgumentException(
+                    $"{nameof(tradingCondition.BaseTradingConditionId)} may be set only for a non-base trading condition", 
+                    nameof(tradingCondition.BaseTradingConditionId));
+            }
+
+            var defaultTradingCondition =
+                (await _tradingConditionsRepository.GetDefaultAsync()).FirstOrDefault();            
             if (tradingCondition.IsDefault 
                 && defaultTradingCondition != null && defaultTradingCondition.Id != tradingCondition.Id)
             {
@@ -80,8 +99,6 @@ namespace MarginTrading.SettingsService.Controllers
             {
                 tradingCondition.IsDefault = true;
             }
-            
-            _defaultLegalEntitySettings.Set(tradingCondition);
                 
             if (!await _tradingConditionsRepository.TryInsertAsync(
                 _convertService.Convert<TradingConditionContract, TradingCondition>(tradingCondition)))
@@ -92,6 +109,12 @@ namespace MarginTrading.SettingsService.Controllers
 
             await _eventSender.SendSettingsChangedEvent($"{Request.Path}", 
                 SettingsChangedSourceType.TradingCondition, tradingCondition.Id);
+            
+            if (!string.IsNullOrWhiteSpace(tradingCondition.BaseTradingConditionId))
+            {
+                await _eventSender.SendSettingsChangedEvent($"{Request.Path}",
+                    SettingsChangedSourceType.TradingInstrument);
+            }
 
             return tradingCondition;
         }
@@ -120,6 +143,40 @@ namespace MarginTrading.SettingsService.Controllers
             
             ValidateId(tradingConditionId, tradingCondition);
             
+            _defaultLegalEntitySettings.Set(tradingCondition);
+
+            var existingCondition = await _tradingConditionsRepository.GetAsync(tradingCondition.Id);
+            if (existingCondition == null)
+            {
+                throw new ArgumentException($"Trading condition with Id = {tradingCondition.Id} not found",
+                    nameof(tradingCondition.Id));
+            }
+
+            if (existingCondition.LegalEntity != tradingCondition.LegalEntity)
+            {
+                throw new ArgumentException("LegalEntity cannot be changed", 
+                    nameof(tradingCondition.LegalEntity));
+            }
+
+            if (existingCondition.IsBase != tradingCondition.IsBase)
+            {
+                throw new ArgumentException($"{nameof(tradingCondition.IsBase)} property cannot be changed",
+                    nameof(tradingCondition.IsBase));
+            }
+            
+            if (tradingCondition.IsDefault && !tradingCondition.IsBase)
+            {
+                throw new ArgumentException("Only base trading condition may be default", 
+                    nameof(tradingCondition.IsBase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(tradingCondition.BaseTradingConditionId) && tradingCondition.IsBase)
+            {
+                throw new ArgumentException(
+                    $"{nameof(tradingCondition.BaseTradingConditionId)} may be set only for a non-base trading condition", 
+                    nameof(tradingCondition.BaseTradingConditionId));
+            }
+            
             var defaultTradingCondition =
                 (await _tradingConditionsRepository.GetDefaultAsync()).FirstOrDefault();
             if (defaultTradingCondition == null && !tradingCondition.IsDefault)
@@ -132,25 +189,18 @@ namespace MarginTrading.SettingsService.Controllers
             {
                 await SetDefault(defaultTradingCondition, false);
             }
-            
-            _defaultLegalEntitySettings.Set(tradingCondition);
-
-            var existingCondition = await _tradingConditionsRepository.GetAsync(tradingCondition.Id);
-            if (existingCondition == null)
-            {
-                throw new Exception($"Trading condition with Id = {tradingCondition.Id} not found");
-            }
-
-            if (existingCondition.LegalEntity != tradingCondition.LegalEntity)
-            {
-                throw new Exception("LegalEntity cannot be changed");
-            }
 
             await _tradingConditionsRepository.UpdateAsync(
                 _convertService.Convert<TradingConditionContract, TradingCondition>(tradingCondition));
 
             await _eventSender.SendSettingsChangedEvent($"{Request.Path}", 
                 SettingsChangedSourceType.TradingCondition, tradingConditionId);
+
+            if (existingCondition.BaseTradingConditionId != tradingCondition.BaseTradingConditionId)
+            {
+                await _eventSender.SendSettingsChangedEvent($"{Request.Path}",
+                    SettingsChangedSourceType.TradingInstrument);
+            }
             
             return tradingCondition;
         }
@@ -175,7 +225,7 @@ namespace MarginTrading.SettingsService.Controllers
         {
             if (tradingCondition == null)
             {
-                throw new ArgumentNullException("tradingCondition", "Model is incorrect");
+                throw new ArgumentNullException(nameof(tradingCondition), "Model is incorrect");
             }
             
             if (string.IsNullOrWhiteSpace(tradingCondition?.Id))
