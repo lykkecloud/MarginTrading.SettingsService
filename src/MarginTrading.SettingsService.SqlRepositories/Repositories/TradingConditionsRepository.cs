@@ -17,8 +17,6 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
     public class TradingConditionsRepository : ITradingConditionsRepository
     {
         public const string TableName = "TradingConditions";
-        private const string InsertProcName = "InsertTradingCondition";
-        private const string UpdateProcName = "UpdateTradingCondition";
         
         private static Type DataType => typeof(ITradingCondition);
         private static readonly string GetColumns = "[" + string.Join("],[", DataType.GetProperties().Select(x => x.Name)) + "]";
@@ -36,10 +34,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             _log = log;
             _connectionString = connectionString;
             
-            var projectPath = GetType().Assembly.GetName().Name;
-            connectionString.InitializeSqlObject("TableTradingConditions.sql", projectPath, log);
-            connectionString.InitializeSqlObject("ProcInsertTradingCondition.sql", projectPath, log);
-            connectionString.InitializeSqlObject("ProcUpdateTradingCondition.sql", projectPath, log);
+            connectionString.InitializeSqlObject("TradingConditions.sql", log);
         }
 
         public async Task<IReadOnlyList<ITradingCondition>> GetAsync()
@@ -80,8 +75,9 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             {
                 try
                 {
-                    await conn.ExecuteAsync(InsertProcName, tradingCondition,
-                        commandType: CommandType.StoredProcedure);
+                    await conn.ExecuteAsync(
+                        $"insert into {TableName} ({GetColumns}) values ({GetFields})",
+                        _convertService.Convert<ITradingCondition, TradingConditionEntity>(tradingCondition));
                 }
                 catch (Exception ex)
                 {
@@ -98,8 +94,9 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                await conn.ExecuteAsync(UpdateProcName, tradingCondition,
-                    commandType: CommandType.StoredProcedure);
+                await conn.ExecuteAsync(
+                    $"update {TableName} set {GetUpdateClause} where Id=@Id", 
+                    _convertService.Convert<ITradingCondition, TradingConditionEntity>(tradingCondition));
             }
         }
     }

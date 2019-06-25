@@ -138,7 +138,7 @@ namespace MarginTrading.SettingsService.Migration
             }
             Console.WriteLine($"Trading conditions succeeded: {tradingConditionsSucceeded}, failed: {tradingConditions.Count - tradingConditionsSucceeded}.");
 
-            var tradingInstruments = await tradingInstrumentsRepos.First().GetAsync();
+            var tradingInstruments = await tradingInstrumentsRepos.First().GetByTradingConditionAsync(null);
             var tradingInstrumentsSucceeded = 0;
             foreach (var tradingInstrument in tradingInstruments)
             {

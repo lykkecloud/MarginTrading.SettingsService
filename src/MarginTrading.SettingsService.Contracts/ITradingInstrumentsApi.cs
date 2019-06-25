@@ -17,15 +17,19 @@ namespace MarginTrading.SettingsService.Contracts
         /// Get the list of trading instruments
         /// </summary>
         [Get("/api/tradingInstruments")]
-        Task<List<TradingInstrumentContract>> List([Query, CanBeNull] string tradingConditionId);
+        Task<List<TradingInstrumentContract>> List([Query, CanBeNull] string tradingConditionId = null, 
+            [Query] bool raw = false);
         
         /// <summary>
         /// Get the list of trading instruments with optional pagination
         /// </summary>
         [Get("/api/assetPairs/by-pages")]
         Task<PaginatedResponseContract<TradingInstrumentContract>> ListByPages(
-            [Query, CanBeNull] string tradingConditionId,
-            [Query, CanBeNull] int? skip = null, [Query, CanBeNull] int? take = null);
+            [Query, CanBeNull] string tradingConditionId = null,
+            [Query, CanBeNull] int? skip = null, 
+            [Query, CanBeNull] int? take = null, 
+            [Query] bool sortAscending = true,
+            [Query] bool raw = false);
 
         /// <summary>
         /// Create new trading instrument
@@ -48,7 +52,8 @@ namespace MarginTrading.SettingsService.Contracts
         [Get("/api/tradingInstruments/{tradingConditionId}/{assetPairId}")]
         Task<TradingInstrumentContract> Get(
             [NotNull] string tradingConditionId,
-            [NotNull] string assetPairId);
+            [NotNull] string assetPairId, 
+            [Query] bool raw = false);
 
         /// <summary>
         /// Update the trading instrument

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Linq;
 using Common.Log;
 using Dapper;
 using MarginTrading.SettingsService.Core.Extensions;
@@ -10,10 +12,9 @@ namespace MarginTrading.SettingsService.SqlRepositories
 {
     public static class SqlExtensions
     {   
-        public static void InitializeSqlObject(this string connectionString, string scriptFileName, string projectPath, 
-            ILog log = null)
+        public static void InitializeSqlObject(this string connectionString, string scriptFileName, ILog log = null)
         {
-            var creationScript = FileExtensions.ReadFromFile(projectPath, scriptFileName);
+            var creationScript = FileExtensions.ReadFromFile(scriptFileName);
             
             using (var conn = new SqlConnection(connectionString))
             {
@@ -23,7 +24,7 @@ namespace MarginTrading.SettingsService.SqlRepositories
                 }
                 catch (Exception ex)
                 {
-                    log?.WriteErrorAsync(projectPath, nameof(InitializeSqlObject), 
+                    log?.WriteErrorAsync(typeof(SqlExtensions).FullName, nameof(InitializeSqlObject), 
                         scriptFileName, ex).Wait();
                     throw;
                 }
@@ -50,6 +51,11 @@ namespace MarginTrading.SettingsService.SqlRepositories
             {
                 connection.Close();
             }
+        }
+
+        public static int GetTotalRows(this IEnumerable<dynamic> data)
+        {
+            return data?.FirstOrDefault()?.TotalRows ?? 0;
         }
     }
 }

@@ -75,6 +75,6 @@
   </Target>
 
   <ItemGroup>
-    <None Include="..\MarginTrading.SettingsService.SqlRepositories\Scripts\**" CopyToOutputDirectory="PreserveNewest" LinkBase="Scripts" />
+    <None Include="..\..\Scripts\**" CopyToOutputDirectory="PreserveNewest" LinkBase="Scripts" />
   </ItemGroup>
 </Project>

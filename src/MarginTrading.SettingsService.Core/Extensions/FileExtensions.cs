@@ -5,10 +5,10 @@ namespace MarginTrading.SettingsService.Core.Extensions
 {
     public static class FileExtensions
     {
-        public static string ReadFromFile(string projectPath, string scriptFileName)
+        public static string ReadFromFile(string scriptFileName)
         {
             // TODO: Should be exposed via settings
-            var debugLocation = $"{Directory.GetCurrentDirectory()}/../{projectPath}/Scripts/{scriptFileName}";
+            var debugLocation = $"{Directory.GetCurrentDirectory()}/../../Scripts/{scriptFileName}";
             var prodLocation = $"./Scripts/{scriptFileName}";
 
             var fileContent = GetFileContent(prodLocation) ?? GetFileContent(debugLocation);

@@ -7,8 +7,6 @@ namespace MarginTrading.SettingsService.Core.Domain
     [UsedImplicitly]
     public class TradingCondition : ITradingCondition
     {
-        public const string TradingProfileId = "TradingProfile";
-        
         public TradingCondition(string id, string name, string legalEntity, string baseTradingConditionId, 
             decimal marginCall1, decimal marginCall2, 
             decimal stopOut, decimal depositLimit, decimal withdrawalLimit, string limitCurrency, 

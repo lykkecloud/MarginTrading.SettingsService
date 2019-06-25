@@ -60,12 +60,11 @@ namespace MarginTrading.SettingsService.Controllers
         /// </summary>
         [HttpGet]
         [Route("")]
-        public async Task<List<TradingInstrumentContract>> List([FromQuery] string tradingConditionId)
+        public async Task<List<TradingInstrumentContract>> List([FromQuery] string tradingConditionId = null, 
+            [FromQuery] bool raw = false)
         {
-            var data = string.IsNullOrWhiteSpace(tradingConditionId)
-                ? await _tradingInstrumentsRepository.GetAsync()
-                : await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId);
-            //todo merge logic
+            var data = await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId, raw);
+            
             return data.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList();
         }
 
@@ -74,15 +73,17 @@ namespace MarginTrading.SettingsService.Controllers
         /// </summary>
         [HttpGet]
         [Route("by-pages")]
-        public async Task<PaginatedResponseContract<TradingInstrumentContract>> ListByPages(string tradingConditionId, 
-            int? skip = null, int? take = null)
+        public async Task<PaginatedResponseContract<TradingInstrumentContract>> ListByPages(
+            [FromQuery] string tradingConditionId = null, 
+            [FromQuery] int? skip = 0, [FromQuery] int? take = 20, 
+            [FromQuery] bool sortAscending = true, [FromQuery] bool raw = false)
         {
             ApiValidationHelper.ValidatePagingParams(skip, take);
             
-            var data = await _tradingInstrumentsRepository.GetByPagesAsync(tradingConditionId, skip, take);
-            //todo merge logic
+            var data = await _tradingInstrumentsRepository.GetByPagesAsync(tradingConditionId, skip, take, sortAscending, raw);
+            
             return new PaginatedResponseContract<TradingInstrumentContract>(
-                contents: data.Contents.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList(),
+                contents: data.Contents.Select(_convertService.Convert<ITradingInstrument, TradingInstrumentContract>).ToList(),
                 start: data.Start,
                 size: data.Size,
                 totalSize: data.TotalSize
@@ -159,9 +160,10 @@ namespace MarginTrading.SettingsService.Controllers
         /// </summary>
         [HttpGet]
         [Route("{tradingConditionId}/{assetPairId}")]
-        public async Task<TradingInstrumentContract> Get(string tradingConditionId, string assetPairId)
+        public async Task<TradingInstrumentContract> Get(string tradingConditionId, string assetPairId, 
+            [FromQuery] bool raw = false)
         {
-            var obj = await _tradingInstrumentsRepository.GetAsync(assetPairId, tradingConditionId);
+            var obj = await _tradingInstrumentsRepository.GetAsync(assetPairId, tradingConditionId, raw);
 
             return _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(obj);
         }
@@ -258,9 +260,9 @@ namespace MarginTrading.SettingsService.Controllers
                 throw new ArgumentNullException(nameof(instrument), "Model is incorrect");
             }
             
-            if (string.IsNullOrWhiteSpace(instrument?.TradingConditionId))
+            if (instrument.TradingConditionId == null)
             {
-                throw new ArgumentNullException(nameof(instrument.TradingConditionId), "TradingConditionId must be set");
+                throw new ArgumentNullException(nameof(instrument.TradingConditionId), "TradingConditionId must be not null");
             }
             
             if (string.IsNullOrWhiteSpace(instrument.Instrument))

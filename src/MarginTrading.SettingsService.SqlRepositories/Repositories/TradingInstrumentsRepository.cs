@@ -40,73 +40,77 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             _log = log;
             _connectionString = connectionString;
 
-            var projectPath = GetType().Assembly.GetName().Name;
-            connectionString.InitializeSqlObject("TableTradingInstruments.sql", projectPath, log);
-            connectionString.InitializeSqlObject("ProcGetTradingInstrument.sql", projectPath, log);
-            connectionString.InitializeSqlObject("ProcGetAllTradingInstruments.sql", projectPath, log);
+            connectionString.InitializeSqlObject("TradingInstruments.sql", log);
+            connectionString.InitializeSqlObject("CompileAndGetTradingInstrument.sql", log);
+            connectionString.InitializeSqlObject("CompileAndGetAllTradingInstruments.sql", log);
         }
 
-        public async Task<IReadOnlyList<ITradingInstrument>> GetAsync()
+        public async Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(string tradingConditionId, 
+            bool raw = false)
+        {
+            var data = await GetByPagesAsync(tradingConditionId, raw: raw);
+            return data.Contents;
+        }
+
+        public async Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null,
+            int? skip = null, int? take = null, bool sortAscending = true, bool raw = false)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var tradingConditions = await conn.QueryAsync<string>(
-                    $"SELECT Id FROM {TradingConditionsRepository.TableName}");
-
-                var objects = new List<TradingInstrumentEntity>();
-                foreach (var tradingCondition in tradingConditions)
+                List<TradingInstrumentEntity> objects;
+                if (raw)
                 {
-                    var data = await conn.QueryAsync<TradingInstrumentEntity>(
+                    var whereClause = "WHERE 1=1 "
+                                      + (string.IsNullOrWhiteSpace(tradingConditionId) ? "" : " AND TradingConditionId=@tradingConditionId");
+                    var orderDirection = sortAscending ? "ASC" : "DESC";
+                    var orderClause = $"ORDER BY TradingConditionId {orderDirection}, Instrument {orderDirection}";
+                    var paginationClause = $"OFFSET {skip ?? 0} ROWS FETCH NEXT {take ?? int.MaxValue} ROWS ONLY";
+                    var gridReader = await conn.QueryMultipleAsync(
+                        $"SELECT * FROM {TableName} {whereClause} {orderClause} {paginationClause}; SELECT COUNT(*) FROM {TableName} {whereClause}",
+                        new {tradingConditionId});
+
+                    objects = (await gridReader.ReadAsync<TradingInstrumentEntity>()).ToList();
+                    var totalRows = await gridReader.ReadSingleAsync<int>();
+                    objects.ForEach(x => x.TotalRows = totalRows);
+                }
+                else
+                {
+                    objects = (await conn.QueryAsync<TradingInstrumentEntity>(
                         GetAllByTradingConditionProcName,
-                        new {TradingConditionId = tradingCondition},
-                        commandType: CommandType.StoredProcedure);
-                    objects.AddRange(data);
+                        new
+                        {
+                            TradingConditionId = tradingConditionId,
+                            Skip = skip ?? 0,
+                            Take = take ?? int.MaxValue,
+                            SortAscending = sortAscending ? 1 : 0,
+                        },
+                        commandType: CommandType.StoredProcedure)).ToList();
                 }
                 
-                return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).ToList();
-            }
-        }
-
-        public async Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(string tradingConditionId)
-        {
-            using (var conn = new SqlConnection(_connectionString))
-            {
-                var objects = await conn.QueryAsync<TradingInstrumentEntity>(
-                    GetAllByTradingConditionProcName,
-                    new {TradingConditionId = tradingConditionId},
-                    commandType: CommandType.StoredProcedure);
+                var tradingInstruments = objects.Select(x => 
+                    _convertService.Convert<TradingInstrumentEntity, TradingInstrument>(x))
+                    .ToList();
                 
-                return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).ToList();
+                return new PaginatedResponse<ITradingInstrument>(
+                    contents: tradingInstruments,
+                    start: skip ?? 0,
+                    size: tradingInstruments.Count,
+                    totalSize: objects.GetTotalRows()
+                );
             }
         }
 
-        /// <summary>
-        /// It's not paginated implementation - it just takes all, and filter in-mem.
-        /// </summary>
-        public async Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null,
-            int? skip = null, int? take = null)
-        {//todo think about making real pagination
-            var all = tradingConditionId == null
-                ? await GetAsync()
-                : await GetByTradingConditionAsync(tradingConditionId);
-
-            var tradingInstruments = all.Skip(skip ?? 0).Take(PaginationHelper.GetTake(take)).ToList();
-
-            return new PaginatedResponse<ITradingInstrument>(
-                contents: tradingInstruments,
-                start: skip ?? 0,
-                size: tradingInstruments.Count,
-                totalSize: all.Count
-            );
-        }
-
-        public async Task<ITradingInstrument> GetAsync(string assetPairId, string tradingConditionId)
+        public async Task<ITradingInstrument> GetAsync(string assetPairId, string tradingConditionId, bool raw = false)
         {
             using (var conn = new SqlConnection(_connectionString))
             {
                 var objects = await conn.QueryAsync<TradingInstrumentEntity>(
                     GetProcName,
-                    new {TradingConditionId = tradingConditionId},
+                    new
+                    {
+                        TradingConditionId = tradingConditionId,
+                        TradingInstrumentId = assetPairId,
+                    },
                     commandType: CommandType.StoredProcedure);
                 
                 return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).FirstOrDefault();
