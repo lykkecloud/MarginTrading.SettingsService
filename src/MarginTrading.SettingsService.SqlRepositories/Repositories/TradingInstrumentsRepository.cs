@@ -107,7 +107,13 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
                 IEnumerable<TradingInstrumentEntity> objects;
                 if (raw)
                 {
-                    objects = await conn.QueryAsync<TradingInstrumentEntity>($"SELECT * FROM {TableName}");
+                    objects = await conn.QueryAsync<TradingInstrumentEntity>(
+                        $"SELECT * FROM {TableName} WHERE TradingConditionId=@tradingConditionId AND Instrument=@assetPairId",
+                        new
+                        {
+                            tradingConditionId = tradingConditionId, 
+                            assetPairId = assetPairId,
+                        });
                 }
                 else
                 {
