@@ -104,15 +104,23 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         {
             using (var conn = new SqlConnection(_connectionString))
             {
-                var objects = await conn.QueryAsync<TradingInstrumentEntity>(
-                    GetProcName,
-                    new
-                    {
-                        TradingConditionId = tradingConditionId,
-                        TradingInstrumentId = assetPairId,
-                    },
-                    commandType: CommandType.StoredProcedure);
-                
+                IEnumerable<TradingInstrumentEntity> objects;
+                if (raw)
+                {
+                    objects = await conn.QueryAsync<TradingInstrumentEntity>($"SELECT * FROM {TableName}");
+                }
+                else
+                {
+                    objects = await conn.QueryAsync<TradingInstrumentEntity>(
+                        GetProcName,
+                        new
+                        {
+                            TradingConditionId = tradingConditionId,
+                            TradingInstrumentId = assetPairId,
+                        },
+                        commandType: CommandType.StoredProcedure);
+                }
+
                 return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).FirstOrDefault();
             }
         }
