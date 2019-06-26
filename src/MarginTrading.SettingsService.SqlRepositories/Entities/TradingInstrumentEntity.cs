@@ -26,5 +26,27 @@ namespace MarginTrading.SettingsService.SqlRepositories.Entities
         public string CommissionCurrency { get; set; }
         
         public int TotalRows { get; set; }
+
+        public static TradingInstrumentEntity Create(ITradingInstrument tradingInstrument)
+            => new TradingInstrumentEntity
+            {
+                TradingConditionId = tradingInstrument.TradingConditionId,
+                Instrument = tradingInstrument.Instrument,
+                LeverageInit = tradingInstrument.LeverageInit,
+                LeverageMaintenance = tradingInstrument.LeverageMaintenance,
+                SwapLong = tradingInstrument.SwapLong,
+                SwapShort = tradingInstrument.SwapShort,
+                Delta = tradingInstrument.Delta,
+                DealMinLimit = tradingInstrument.DealMinLimit,
+                DealMaxLimit = tradingInstrument.DealMaxLimit,
+                PositionLimit = tradingInstrument.PositionLimit,
+                ShortPosition = tradingInstrument.ShortPosition,
+                LiquidationThreshold = tradingInstrument.LiquidationThreshold,
+                OvernightMarginMultiplier = tradingInstrument.OvernightMarginMultiplier,
+                CommissionRate = tradingInstrument.CommissionRate,
+                CommissionMin = tradingInstrument.CommissionMin,
+                CommissionMax = tradingInstrument.CommissionMax,
+                CommissionCurrency = tradingInstrument.CommissionCurrency,
+            };
     }
 }

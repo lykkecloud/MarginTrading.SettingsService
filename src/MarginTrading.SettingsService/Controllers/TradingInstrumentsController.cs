@@ -102,7 +102,7 @@ namespace MarginTrading.SettingsService.Controllers
             if (!await _tradingInstrumentsRepository.TryInsertAsync(
                 _convertService.Convert<TradingInstrumentContract, TradingInstrument>(instrument)))
             {
-                throw new ArgumentException($"Trading instrument with tradingConditionId {instrument.TradingConditionId}" +
+                throw new ArgumentException($"Trading instrument with tradingConditionId {instrument.TradingConditionId} " +
                                             $"and assetPairId {instrument.Instrument} already exists");
             }
 

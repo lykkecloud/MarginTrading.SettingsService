@@ -30,13 +30,11 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         private static readonly string GetUpdateClause = string.Join(",",
             DataType.GetProperties().Select(x => "[" + x.Name + "]=@" + x.Name));
 
-        private readonly IConvertService _convertService;
         private readonly string _connectionString;
         private readonly ILog _log;
         
-        public TradingInstrumentsRepository(IConvertService convertService, string connectionString, ILog log)
+        public TradingInstrumentsRepository(string connectionString, ILog log)
         {
-            _convertService = convertService;
             _log = log;
             _connectionString = connectionString;
 
@@ -87,8 +85,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
                         commandType: CommandType.StoredProcedure)).ToList();
                 }
                 
-                var tradingInstruments = objects.Select(x => 
-                    _convertService.Convert<TradingInstrumentEntity, TradingInstrument>(x))
+                var tradingInstruments = objects.Select(TradingInstrument.Create)
                     .ToList();
                 
                 return new PaginatedResponse<ITradingInstrument>(
@@ -127,7 +124,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
                         commandType: CommandType.StoredProcedure);
                 }
 
-                return objects.Select(_convertService.Convert<TradingInstrumentEntity, TradingInstrument>).FirstOrDefault();
+                return objects.Select(TradingInstrument.Create).FirstOrDefault();
             }
         }
 
@@ -150,7 +147,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
 
                     await conn.ExecuteAsync(
                         $"insert into {TableName} ({GetColumns}) values ({GetFields})",
-                        _convertService.Convert<ITradingInstrument, TradingInstrumentEntity>(tradingInstrument));
+                        TradingInstrumentEntity.Create(tradingInstrument));
                 }
                 catch (Exception ex)
                 {
@@ -169,7 +166,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             {
                 await conn.ExecuteAsync(
                     $"update {TableName} set {GetUpdateClause} where TradingConditionId=@TradingConditionId AND Instrument=@Instrument", 
-                    _convertService.Convert<ITradingInstrument, TradingInstrumentEntity>(tradingInstrument));
+                    TradingInstrumentEntity.Create(tradingInstrument));
             }
         }
 
@@ -221,7 +218,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
                         
                         await conn.ExecuteAsync(
                             $"insert into {TableName} ({GetColumns}) values ({GetFields})", 
-                            objectsToAdd.Select(_convertService.Convert<TradingInstrument, TradingInstrumentEntity>), 
+                            objectsToAdd.Select(TradingInstrumentEntity.Create), 
                             transaction);
                         
                         transaction.Commit();
@@ -241,7 +238,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
         public async Task<List<ITradingInstrument>> UpdateBatchAsync(string tradingConditionId,
             List<TradingInstrument> items)
         {
-            var entities = items.Select(_convertService.Convert<TradingInstrument, TradingInstrumentEntity>).ToList();
+            var entities = items.Select(TradingInstrumentEntity.Create).ToList();
             
             using (var conn = new SqlConnection(_connectionString))
             {

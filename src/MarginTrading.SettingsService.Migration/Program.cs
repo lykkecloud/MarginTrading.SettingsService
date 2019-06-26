@@ -74,7 +74,7 @@ namespace MarginTrading.SettingsService.Migration
             var tradingInstrumentsRepos = new ITradingInstrumentsRepository[]
             {
                 new AzureRepos.TradingInstrumentsRepository(fakeLogger, convertService, azureRm), 
-                new SqlRepos.TradingInstrumentsRepository(convertService, sqlConnStr, fakeLogger),
+                new SqlRepos.TradingInstrumentsRepository(sqlConnStr, fakeLogger),
             };
             var tradingRoutesRepos = new ITradingRoutesRepository[]
             {
