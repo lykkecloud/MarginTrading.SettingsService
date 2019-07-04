@@ -16,9 +16,12 @@ namespace MarginTrading.SettingsService.Contracts
         /// <summary>
         /// Get the list of trading instruments
         /// </summary>
+        /// <param name="tradingConditionId">Optional. Trading condition id</param>
+        /// <param name="raw">Optional. If true return the actual value, not taking inheritance hierarchy into account</param>
+        /// <param name="tradingProfile">Optional. If true return only Trading Profile values</param>
         [Get("/api/tradingInstruments")]
-        Task<List<TradingInstrumentContract>> List([Query, CanBeNull] string tradingConditionId = null, 
-            [Query] bool raw = false);
+        Task<List<TradingInstrumentContract>> List([Query, CanBeNull] string tradingConditionId = null,
+            [Query] bool raw = false, [Query] bool tradingProfile = false);
         
         /// <summary>
         /// Get the list of trading instruments with optional pagination

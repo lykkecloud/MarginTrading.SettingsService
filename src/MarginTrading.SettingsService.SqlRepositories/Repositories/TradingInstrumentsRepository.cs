@@ -43,8 +43,8 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
             connectionString.InitializeSqlObject("CompileAndGetAllTradingInstruments.sql", log);
         }
 
-        public async Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(string tradingConditionId, 
-            bool raw = false)
+        public async Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(
+            string tradingConditionId = null, bool raw = false)
         {
             var data = await GetByPagesAsync(tradingConditionId, raw: raw);
             return data.Contents;
@@ -59,7 +59,7 @@ namespace MarginTrading.SettingsService.SqlRepositories.Repositories
                 if (raw)
                 {
                     var whereClause = "WHERE 1=1 "
-                                      + (string.IsNullOrWhiteSpace(tradingConditionId) ? "" : " AND TradingConditionId=@tradingConditionId");
+                                      + (tradingConditionId == null ? "" : " AND TradingConditionId=@tradingConditionId");
                     var orderDirection = sortAscending ? "ASC" : "DESC";
                     var orderClause = $"ORDER BY TradingConditionId {orderDirection}, Instrument {orderDirection}";
                     var paginationClause = $"OFFSET {skip ?? 0} ROWS FETCH NEXT {take ?? int.MaxValue} ROWS ONLY";

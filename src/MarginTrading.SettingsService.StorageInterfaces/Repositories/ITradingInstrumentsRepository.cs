@@ -8,7 +8,7 @@ namespace MarginTrading.SettingsService.StorageInterfaces.Repositories
 {
     public interface ITradingInstrumentsRepository
     {
-        Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(string tradingConditionId = null, 
+        Task<IReadOnlyList<ITradingInstrument>> GetByTradingConditionAsync(string tradingConditionId = null,
             bool raw = false);
         Task<PaginatedResponse<ITradingInstrument>> GetByPagesAsync(string tradingConditionId = null,
             int? skip = null, int? take = null, bool sortAscending = true, bool raw = false);

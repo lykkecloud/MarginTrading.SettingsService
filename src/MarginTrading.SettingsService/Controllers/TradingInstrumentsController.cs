@@ -58,11 +58,16 @@ namespace MarginTrading.SettingsService.Controllers
         /// <summary>
         /// Get the list of trading instruments
         /// </summary>
+        /// <param name="tradingConditionId">Optional. Trading condition id</param>
+        /// <param name="raw">Optional. If true return the actual value, not taking inheritance hierarchy into account</param>
+        /// <param name="tradingProfile">Optional. If true return only Trading Profile values</param>
         [HttpGet]
         [Route("")]
         public async Task<List<TradingInstrumentContract>> List([FromQuery] string tradingConditionId = null, 
-            [FromQuery] bool raw = false)
+            [FromQuery] bool raw = false, [FromQuery] bool tradingProfile = false)
         {
+            tradingConditionId = tradingProfile ? TradingConditionContract.TradingProfileId: tradingConditionId;
+            
             var data = await _tradingInstrumentsRepository.GetByTradingConditionAsync(tradingConditionId, raw);
             
             return data.Select(x => _convertService.Convert<ITradingInstrument, TradingInstrumentContract>(x)).ToList();

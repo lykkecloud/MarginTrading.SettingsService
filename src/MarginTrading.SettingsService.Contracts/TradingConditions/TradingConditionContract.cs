@@ -4,6 +4,8 @@ namespace MarginTrading.SettingsService.Contracts.TradingConditions
 {
     public class TradingConditionContract
     {
+        public const string TradingProfileId = "";
+        
         public string Id { get; set; }
         public string Name { get; set; }
         public string LegalEntity { get; set; }
@@ -18,6 +20,6 @@ namespace MarginTrading.SettingsService.Contracts.TradingConditions
         public bool IsDefault { get; set; }
         public bool IsBase { get; set; }
         
-        public bool IsTradingProfile => string.IsNullOrEmpty(Id);
+        public bool IsTradingProfile => Id == TradingProfileId;
     }
 }
