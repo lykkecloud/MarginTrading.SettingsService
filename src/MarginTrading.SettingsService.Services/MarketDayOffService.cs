@@ -222,7 +222,8 @@ namespace MarginTrading.SettingsService.Services
                     {
                         new CompiledScheduleTimeInterval(sch, start.AddDays(-1), end.AddDays(-1)),
                         new CompiledScheduleTimeInterval(sch, start, end),
-                        new CompiledScheduleTimeInterval(sch, start.AddDays(1), end.AddDays(1))
+                        new CompiledScheduleTimeInterval(sch, start.AddDays(1), end.AddDays(1)),
+                        new CompiledScheduleTimeInterval(sch, start.AddDays(2), end.AddDays(2))
                     };
                 })
                 : new List<CompiledScheduleTimeInterval>();

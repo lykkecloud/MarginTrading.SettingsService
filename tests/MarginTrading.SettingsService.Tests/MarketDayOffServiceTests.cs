@@ -33,6 +33,7 @@ namespace MarginTrading.SettingsService.Tests
         [InlineData("Market4.1", true, "2019-10-11", "2019-10-15")]
         [InlineData("Market4.2", true, "2019-10-11", "2019-10-14")]
         [InlineData("Market4.3", false, "2019-10-08", "2019-10-11")]
+        [InlineData("Market6.1", false, "2019-10-11", "2019-10-12T10:30:00")]
         public async Task TestGetMarketsInfo(string marketId, bool isTradingEnabled, 
             string lastTradingDay, string nextTradingDay)
         {
@@ -297,6 +298,45 @@ namespace MarginTrading.SettingsService.Tests
                 {
                     Time = TimeSpan.Parse("12:00:00"),
                 });
+            
+            AddSettings(
+                repoData,
+                "Market6.1",
+                new ScheduleConstraint
+                {
+                    Date = new DateTime(2019, 10, 11, 10, 0, 0),
+                },
+                new ScheduleConstraint
+                {
+                    Date = new DateTime(2019, 10, 12, 10, 0, 0),
+                }, 
+                10);
+
+            AddSettings(
+                repoData,
+                "Market6.1",
+                new ScheduleConstraint
+                {
+                    Date = new DateTime(2019, 10, 11, 10, 0, 0),
+                },
+                new ScheduleConstraint
+                {
+                    Date = new DateTime(2019, 10, 13, 12, 0, 0),
+                });
+
+            AddSettings(
+                repoData,
+                "Market6.1",
+                new ScheduleConstraint
+                {
+                    Time = TimeSpan.Parse("10:30:00"),
+                },
+                new ScheduleConstraint
+                {
+                    Time = TimeSpan.Parse("12:00:00"),
+                },
+                1,
+                true);
 
             return repoData;
         }
